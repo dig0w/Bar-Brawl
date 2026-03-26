@@ -1,0 +1,41 @@
+body {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 100dvh;
+
+    background-color: rgb(38, 38, 38);
+}
+
+.game-container {
+    height: 95%;
+    width: auto;
+}
+#game-canvas {
+    height: 100%;
+    width: auto;
+
+    display: block;
+
+    image-rendering: pixelated;
+}
+
+@media (orientation: portrait) {
+    .game-container {
+        width: 95%;
+        height: auto;
+    }
+    #game-canvas {
+        width: 100%;
+        height: auto;
+
+        display: block;
+
+        background-color: aqua;
+    }
+}
