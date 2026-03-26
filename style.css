@@ -13,29 +13,24 @@ body {
 }
 
 .game-container {
-    height: 95%;
-    width: auto;
+    width: min(95vw, calc(95dvh * 1.5));
+    height: min(95dvh, calc(95vw / 1.5));
+    max-width: 95vw;
+    max-height: 95dvh;
+
+    margin: auto;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
 #game-canvas {
+    width: 100%;
     height: 100%;
-    width: auto;
 
     display: block;
 
     image-rendering: pixelated;
-}
-
-@media (orientation: portrait) {
-    .game-container {
-        width: 95%;
-        height: auto;
-    }
-    #game-canvas {
-        width: 100%;
-        height: auto;
-
-        display: block;
-
-        background-color: aqua;
-    }
+    image-rendering: crisp-edges;
 }

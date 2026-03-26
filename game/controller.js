@@ -6,6 +6,7 @@ export class Controller {
     #pawn = null;
 
     #keys = {};
+    #spaceReleased = false;
 
     constructor(engine, pawn) {
         if (!(engine instanceof FighterEngine))
@@ -24,10 +25,19 @@ export class Controller {
 
     Tick(deltaTime) {
         let moveDir = 0;
-        if (this.#keys["ArrowLeft"]) moveDir -= 1;
-        if (this.#keys["ArrowRight"]) moveDir += 1;
+        if (this.#keys["ArrowLeft"] || this.#keys["KeyA"]) moveDir -= 1;
+        if (this.#keys["ArrowRight"] || this.#keys["KeyD"]) moveDir += 1;
         this.#pawn.moveInput = moveDir;
+
+        if (this.#keys["ArrowUp"]) this.#pawn.Jump();
+
+        if (this.#keys["Space"] && this.#spaceReleased) {
+            this.#spaceReleased = false;
+            this.#pawn.Punch();
+        } else if (!this.#keys["Space"]) {
+            this.#spaceReleased = true;
+        }
     }
 
-    Draw() {}
+    Draw() { }
 }
