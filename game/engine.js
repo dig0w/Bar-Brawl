@@ -4,12 +4,16 @@ import { Fighter } from "./fighter.js";
 export class FighterEngine {
     static gravity = 980;
     static friction = .98;
-    #groundY = 16;
+    #groundY = 6;
     #wallX = 0;
 
     #canvas = null;
     #ctx = null;
     #objects = [];
+
+    #backgroundColor = "#cccccc";
+    #backgroundImage = Object.assign(new Image(), { src: "assets/scene.png" });
+    #backgroundImageFill = "cover"; // "stretch" or "cover"
 
     constructor() {
     }
@@ -49,8 +53,22 @@ export class FighterEngine {
         // Clear the canvas
         this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
 
-        this.#ctx.fillStyle = "#cccccc";
+        this.#ctx.fillStyle = "#8A8A8A";
         this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+
+        if (this.#backgroundImage && this.#backgroundImage.complete) {
+            if (this.#backgroundImageFill == "stretch") {
+                this.#ctx.drawImage(this.#backgroundImage, 0, 0, this.#canvas.width, this.#canvas.height);
+            } else if (this.#backgroundImageFill == "cover") {
+                const scale = Math.max(this.#canvas.width / this.#backgroundImage.width, this.#canvas.height / this.#backgroundImage.height);
+                const x = (this.#canvas.width / 2) - (this.#backgroundImage.width / 2) * scale;
+                const y = (this.#canvas.height / 2) - (this.#backgroundImage.height / 2) * scale;
+                this.#ctx.drawImage(this.#backgroundImage, x, y, this.#backgroundImage.width * scale, this.#backgroundImage.height * scale);
+            }
+        } else {
+            this.#ctx.fillStyle = this.#backgroundColor;
+            this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+        }
 
         for (let i = 0; i < this.#objects.length; i++) {
             this.#objects[i].Draw(this.#ctx);

@@ -13,8 +13,8 @@ body {
 }
 
 .game-container {
-    width: min(95vw, calc(95dvh * 1.5));
-    height: min(95dvh, calc(95vw / 1.5));
+    width: min(95vw, calc(95dvh * (4/2)));
+    height: min(95dvh, calc(95vw / (4/2)));
     max-width: 95vw;
     max-height: 95dvh;
 

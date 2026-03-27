@@ -6,7 +6,8 @@ export class Controller {
     #pawn = null;
 
     #keys = {};
-    #spaceReleased = false;
+    #jumpReleased = false;
+    #punchReleased = false;
 
     constructor(engine, pawn) {
         if (!(engine instanceof FighterEngine))
@@ -29,13 +30,18 @@ export class Controller {
         if (this.#keys["ArrowRight"] || this.#keys["KeyD"]) moveDir += 1;
         this.#pawn.moveInput = moveDir;
 
-        if (this.#keys["ArrowUp"]) this.#pawn.Jump();
+        if ((this.#keys["ArrowUp"] || this.#keys["KeyW"]) && this.#jumpReleased) {
+            this.#jumpReleased = false;
+            this.#pawn.Jump();
+        } else if (!(this.#keys["ArrowUp"] || this.#keys["KeyW"])) {
+            this.#jumpReleased = true;
+        }
 
-        if (this.#keys["Space"] && this.#spaceReleased) {
-            this.#spaceReleased = false;
+        if (this.#keys["Space"] && this.#punchReleased) {
+            this.#punchReleased = false;
             this.#pawn.Punch();
         } else if (!this.#keys["Space"]) {
-            this.#spaceReleased = true;
+            this.#punchReleased = true;
         }
     }
 

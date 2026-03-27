@@ -113,7 +113,7 @@ export class Fighter {
 
     Draw(ctx) {
         // Body
-        ctx.drawImage((this.moveInput != 0 || (this.#vel.x | 0) != 0) ? (this.#bodyAnimState ? this.#bodyImg2 : this.#bodyImg1) : this.#bodyImg0,
+        ctx.drawImage((this.#vel.x | 0) != 0 ? (this.#bodyAnimState ? this.#bodyImg2 : this.#bodyImg1) : this.#bodyImg0,
             (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
 
         // Head
