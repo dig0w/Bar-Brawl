@@ -4,38 +4,49 @@ import { Fighter } from "./fighter.js";
 export class FighterEngine {
     static gravity = 980;
     static friction = .98;
-    #groundY = 6;
-    #wallX = 0;
+    #groundY = 2;
+    #worldWidth = 0;
 
     #canvas = null;
     #ctx = null;
     #objects = [];
 
     #backgroundColor = "#cccccc";
-    #backgroundImage = Object.assign(new Image(), { src: "assets/scene.png" });
-    #backgroundImageFill = "cover"; // "stretch" or "cover"
+    #backgroundImage = Object.assign(new Image(), { src: "assets/bar.png" });
+
+    #fighter0 = null;
+    #fighter1 = null;
 
     constructor() {
     }
 
     get gravity() { return FighterEngine.gravity; }
     get friction() { return FighterEngine.friction; }
-    get wallX() { return this.#wallX; }
     get groundY() { return this.#groundY; }
+    get worldWidth() { return this.#worldWidth; }
 
     get canvas() { return this.#canvas; }
+
+    get fighter0() { return this.#fighter0; }
+    get fighter1() { return this.#fighter1; }
 
     Begin() {
         this.#canvas = document.getElementById("game-canvas");
         this.#ctx = this.#canvas.getContext("2d");
+        this.#ctx.imageSmoothingEnabled = false;
 
-        this.#wallX = this.#canvas.width;
         this.#groundY = this.#canvas.height - this.#groundY;
 
-        const fighter1 = new Fighter(this);
-        this.#objects.push(fighter1);
+        this.#fighter0 = new Fighter(this, 0);
+        this.#objects.push(this.#fighter0);
 
-        const ctrl1 = new Controller(this, fighter1);
+        const ctrl0 = new Controller(this, this.#fighter0, 0);
+        this.#objects.push(ctrl0);
+
+        this.#fighter1 = new Fighter(this, 1);
+        this.#objects.push(this.#fighter1);
+
+        const ctrl1 = new Controller(this, this.#fighter1, 1);
         this.#objects.push(ctrl1);
 
         for (let i = 0; i < this.#objects.length; i++) {
@@ -53,26 +64,28 @@ export class FighterEngine {
         // Clear the canvas
         this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
 
-        this.#ctx.fillStyle = "#8A8A8A";
-        this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
-
+        let scrollX = 0;
         if (this.#backgroundImage && this.#backgroundImage.complete) {
-            if (this.#backgroundImageFill == "stretch") {
-                this.#ctx.drawImage(this.#backgroundImage, 0, 0, this.#canvas.width, this.#canvas.height);
-            } else if (this.#backgroundImageFill == "cover") {
-                const scale = Math.max(this.#canvas.width / this.#backgroundImage.width, this.#canvas.height / this.#backgroundImage.height);
-                const x = (this.#canvas.width / 2) - (this.#backgroundImage.width / 2) * scale;
-                const y = (this.#canvas.height / 2) - (this.#backgroundImage.height / 2) * scale;
-                this.#ctx.drawImage(this.#backgroundImage, x, y, this.#backgroundImage.width * scale, this.#backgroundImage.height * scale);
-            }
-        } else {
-            this.#ctx.fillStyle = this.#backgroundColor;
-            this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+            const scale = this.#canvas.height / this.#backgroundImage.height;
+            this.#worldWidth = this.#backgroundImage.width * scale;
+
+            const fighterMidX = (this.fighter0.loc.x + this.fighter1.loc.x) / 2 + this.fighter0.size.w / 2;
+            const viewPercent = Math.max(0, Math.min(1, fighterMidX / this.#canvas.width));
+
+            const extraWidth = this.#worldWidth - this.#canvas.width;
+            scrollX = -(extraWidth * viewPercent);
+
+            this.#ctx.drawImage(this.#backgroundImage, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvas.height | 0));
         }
+
+        this.#ctx.save();
+        this.#ctx.translate((scrollX | 0), 0);
 
         for (let i = 0; i < this.#objects.length; i++) {
             this.#objects[i].Draw(this.#ctx);
         }
+
+        this.#ctx.restore();
     }
 
     DestroyObject(obj) {

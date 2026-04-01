@@ -3,50 +3,54 @@ import { FighterEngine } from "./engine.js";
 export class Fighter {
     #engine = null;
 
-    #size = { w: 16, h: 16 };
+    #size = { w: 20, h: 35 };
     #loc = { x: 0, y: 0 };
     #rot = 0; // Radians
     #vel = { x: 0, y: 0 };
+    #facingRight = true;
 
     #groundY = 0;
-    #wallX = 0;
 
     #jumpForce = 250;
 
-    #bodyImg0 = Object.assign(new Image(), { src: "assets/fighter1_body_0.png" });
-    #bodyImg1 = Object.assign(new Image(), { src: "assets/fighter1_body_1.png" });
-    #bodyImg2 = Object.assign(new Image(), { src: "assets/fighter1_body_2.png" });
+    static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_guy_sheet.png" });
+    static bodyImg1 = Object.assign(new Image(), { src: "assets/biker_sheet.png" });
+    #bodyImg = null;
     static defaultBodyAnimTimer = 10 / 60;
-    #bodyAnimState = false;
+    static maxBodyAnimState = 3;
+    #bodyAnimState = 0;
     #bodyAnimTimer = Fighter.defaultBodyAnimTimer;
-
-    #headImg0 = Object.assign(new Image(), { src: "assets/fighter1_head_0.png" });
-    #headImg1 = Object.assign(new Image(), { src: "assets/fighter1_head_1.png" });
-    static defaultHeadAnimTimer0 = 200 / 60;
-    static defaultHeadAnimTimer1 = 20 / 60;
-    #headAnimState = false;
-    #headAnimTimer = Fighter.defaultHeadAnimTimer0;
-
-    #armsImg0 = Object.assign(new Image(), { src: "assets/fighter1_arms_0.png" });
-    #armsImg1 = Object.assign(new Image(), { src: "assets/fighter1_arms_1.png" });
-    #armsImg2 = Object.assign(new Image(), { src: "assets/fighter1_arms_2.png" });
-    static defaultArmsAnimTimer = 10 / 60;
-    #armsAnimState = false;
-    #armsAnimTimer = Fighter.defaultArmsAnimTimer;
 
     moveInput = 0;
     #punchInput = false;
 
-    constructor(engine = null) {
+    constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
 
         this.#engine = engine;
+
+        switch (variant) {
+            case 0:
+                this.#bodyImg = Fighter.bodyImg0;
+                this.#loc.x = 10;
+                break;
+            case 1:
+                this.#bodyImg = Fighter.bodyImg1;
+                this.#loc.x = this.#engine.canvas.width - this.#size.w - 10;
+                break;
+        }
     }
 
+    get loc() { return this.#loc; }
+    get size() { return this.#size; }
+
+    get isGrounded() { return this.#loc.y >= this.#groundY }
+
     Begin() {
-        this.#wallX = this.#engine.wallX - this.#size.w;
         this.#groundY = this.#engine.groundY - this.#size.h;
+
+        this.#loc.y = this.#groundY;
     }
 
     Tick(deltaTime) {
@@ -66,9 +70,11 @@ export class Fighter {
         this.#loc.y += this.#vel.y * deltaTime;
         this.#loc.x += this.#vel.x * deltaTime;
 
+        
         // X Bounds
-        if (this.#loc.x > this.#wallX) {
-            this.#loc.x = this.#wallX;
+        const maxBoundary = this.#engine.worldWidth - this.#size.w;
+        if (this.#loc.x > maxBoundary) {
+            this.#loc.x = maxBoundary;
             this.#vel.x = 0;
         }
         if (this.#loc.x < 0) {
@@ -90,46 +96,49 @@ export class Fighter {
         const moveIntensity = Math.abs(this.#vel.x) / moveSpeed;
         this.#bodyAnimTimer -= deltaTime * (1.0 + (moveIntensity * 1.0));
         if (this.#bodyAnimTimer <= 0) {
-            this.#bodyAnimState = !this.#bodyAnimState;
+            this.#bodyAnimState = (this.#bodyAnimState + 1) % Fighter.maxBodyAnimState;
             this.#bodyAnimTimer += Fighter.defaultBodyAnimTimer;
         }
 
-        // Head Animation
-        this.#headAnimTimer -= deltaTime;
-        if (this.#headAnimTimer <= 0) {
-            this.#headAnimState = !this.#headAnimState;
-            this.#headAnimTimer += this.#headAnimState ? Fighter.defaultHeadAnimTimer1 : Fighter.defaultHeadAnimTimer0;
-        }
-
-        // Arms Animation
-        if (this.#punchInput) {
-            this.#armsAnimTimer -= deltaTime;
-            if (this.#armsAnimTimer <= 0) {
-                this.#punchInput = false;
-                this.#armsAnimTimer += Fighter.defaultArmsAnimTimer;
-            }
-        }
+        // Face Opponent
+        const opponent = (this.#engine.fighter0 === this) ? this.#engine.fighter1 : this.#engine.fighter0;
+        this.#facingRight = this.#loc.x < opponent.loc.x;
     }
 
     Draw(ctx) {
-        // Body
-        ctx.drawImage((this.#vel.x | 0) != 0 ? (this.#bodyAnimState ? this.#bodyImg2 : this.#bodyImg1) : this.#bodyImg0,
-            (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
+        ctx.save();
 
-        // Head
-        ctx.drawImage(this.#headAnimState ? this.#headImg1 : this.#headImg0, (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
+        if (!this.#facingRight) {
+            ctx.translate(this.#loc.x + this.#size.w / 2, 0);
+            ctx.scale(-1, 1);
+            ctx.translate(-(this.#loc.x + this.#size.w / 2), 0);
+        }
 
-        // Arms
-        ctx.drawImage(this.#punchInput ? (this.#armsAnimState ? this.#armsImg2 : this.#armsImg1) : this.#armsImg0, (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
+        let frameCoords = { x: 0, y: this.#size.h };
+        if ((this.#vel.x | 0) != 0 && this.isGrounded) {
+            switch (this.#bodyAnimState) {
+                case 0:
+                    frameCoords = { x: this.#size.w, y: this.#size.h };
+                    break;
+                case 1:
+                    frameCoords = { x: this.#size.w * 2, y: this.#size.h };
+                    break;
+                case 2:
+                    frameCoords = { x: this.#size.w * 3, y: this.#size.h };
+                    break;
+            }
+        }
+        ctx.drawImage(this.#bodyImg, (frameCoords.x | 0), (frameCoords.y | 0), (this.#size.w | 0), (this.#size.h | 0), (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
+
+        ctx.restore();
     }
 
     Jump() {
-        if (this.#loc.y < this.#groundY) return;
-        this.#vel.y -= this.#jumpForce;
+        if (this.isGrounded)
+            this.#vel.y -= this.#jumpForce;
     }
 
     Punch() {
         this.#punchInput = true;
-        this.#armsAnimState = !this.#armsAnimState;
     }
 }
