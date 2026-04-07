@@ -9,6 +9,7 @@ export class Controller {
     #keys = {};
     #jumpReleased = false;
     #punchReleased = false;
+    #blockReleased = false
 
     constructor(engine, pawn, variant = 0) {
         if (!(engine instanceof FighterEngine))
@@ -27,48 +28,54 @@ export class Controller {
     }
 
     Tick(deltaTime) {
-        let moveDir = 0;
+        let inputs = {
+            "MoveLeft": false,
+            "MoveRight": false,
+            "Jump": false,
+            "Crouch": false,
+            "Punch": false,
+            "Block": false,
+        };
 
         switch (this.#variant) {
             case 0:
-                if (this.#keys["KeyA"]) moveDir -= 1;
-                if (this.#keys["KeyD"]) moveDir += 1;
-                this.#pawn.moveInput = moveDir;
-
-                if (this.#keys["KeyW"] && this.#jumpReleased) {
-                    this.#jumpReleased = false;
-                    this.#pawn.Jump();
-                } else if (!this.#keys["KeyW"]) {
-                    this.#jumpReleased = true;
-                }
-
-                // if (this.#keys["Space"] && this.#punchReleased) {
-                //     this.#punchReleased = false;
-                //     this.#pawn.Punch();
-                // } else if (!this.#keys["Space"]) {
-                //     this.#punchReleased = true;
-                // }
+                inputs.MoveLeft = this.#keys["KeyA"];
+                inputs.MoveRight = this.#keys["KeyD"];
+                inputs.Jump = this.#keys["KeyW"];
+                inputs.Crouch = this.#keys["KeyS"];
+                inputs.Punch = this.#keys["KeyE"];
+                inputs.Block = this.#keys["KeyF"];
                 break;
             case 1:
-                if (this.#keys["ArrowLeft"]) moveDir -= 1;
-                if (this.#keys["ArrowRight"]) moveDir += 1;
-                this.#pawn.moveInput = moveDir;
-
-                if (this.#keys["ArrowUp"] && this.#jumpReleased) {
-                    this.#jumpReleased = false;
-                    this.#pawn.Jump();
-                } else if (!this.#keys["ArrowUp"]) {
-                    this.#jumpReleased = true;
-                }
-
-                // if (this.#keys["Space"] && this.#punchReleased) {
-                //     this.#punchReleased = false;
-                //     this.#pawn.Punch();
-                // } else if (!this.#keys["Space"]) {
-                //     this.#punchReleased = true;
-                // }
+                inputs.MoveLeft = this.#keys["KeyJ"];
+                inputs.MoveRight = this.#keys["KeyK"];
+                inputs.Jump = this.#keys["KeyI"];
+                inputs.Crouch = this.#keys["KeyL"];
+                inputs.Punch = this.#keys["KeyU"];
+                inputs.Block = this.#keys["KeyH"];
                 break;
         }
+
+        let moveDir = 0;
+        if (inputs.MoveLeft) moveDir -= 1;
+        if (inputs.MoveRight) moveDir += 1;
+        this.#pawn.moveInput = moveDir;
+
+        if (inputs.Jump && this.#jumpReleased) {
+            this.#jumpReleased = false;
+            this.#pawn.Jump();
+        } else if (!inputs.Jump) {
+            this.#jumpReleased = true;
+        }
+
+        if (inputs.Punch && this.#punchReleased) {
+            this.#punchReleased = false;
+            this.#pawn.Punch();
+        } else if (!inputs.Punch) {
+            this.#punchReleased = true;
+        }
+
+        this.#pawn.SetBlocking(inputs.Block);
     }
 
     Draw() { }

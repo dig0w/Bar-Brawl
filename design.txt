@@ -33,3 +33,20 @@ from an opening door behind the counter, comes out the manager shouting at the b
 and then to the crowd:
 - All of you get the fuck out!
 the screen fades to black
+
+
+
+Jab:
+Stage 1: Fighter preparing, if hit stop jab
+Stage 2: Throw jab, hit collision
+Stage 3: Recovering
+During these stages the fighter can not move neither Block.
+By combining a Jab with Crouch, throws a low punch.
+By combining a Jab with a Directional Move, throws a punch with the same direction boost.
+
+Block:
+Stage 1: Fighter preparing, if hit stop jab
+Stage 2: Block
+Stage 3: Recovering
+During these stages the fighter can not throw a Jab.
+By combining a Block with Crouch, defends a low punch.
