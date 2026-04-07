@@ -24,7 +24,7 @@ export class Fighter {
 
     moveInput = 0;
 
-    static defaultPunchAnimTimer = 8 / 60;
+    static defaultPunchAnimTimer = 5 / 60;
     static maxPunchAnimState = 3;
     #punchAnimState = -1;
     #punchAnimTimer = Fighter.defaultPunchAnimTimer;
