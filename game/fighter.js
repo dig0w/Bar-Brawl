@@ -2,7 +2,7 @@ import { FighterEngine } from "./engine.js";
 import { Circle, Rect } from "./hitboxes.js";
 
 export class Fighter {
-    static showHitboxes = true;
+    static showHitboxes = false;
     #engine = null;
 
     #size = { w: 32, h: 39 };
@@ -24,19 +24,25 @@ export class Fighter {
 
     moveInput = 0;
 
-    static defaultPunchAnimTimer = 5 / 60;
+    static defaultPunchAnimTimer = 6 / 60;
     static maxPunchAnimState = 3;
     #punchAnimState = -1;
     #punchAnimTimer = Fighter.defaultPunchAnimTimer;
-    static defaultPunchCooldown = 16 / 60;
+
+    #punchHasHit = false;
+    #punchTimer = 0;
+    #startPunchTrace = Fighter.defaultPunchAnimTimer / 2;
+    #endPunchTrace = Fighter.defaultPunchAnimTimer + (Fighter.defaultPunchAnimTimer / 2);
+    static defaultPunchCooldown = 12 / 60;
     #punchCooldown = Fighter.defaultPunchCooldown;
 
     #isBlockHeld = false;
-    static defaultBlockAnimTimer = 8 / 60;
+    static defaultBlockAnimTimer = 6 / 60;
     static maxBlockAnimState = 3;
     #blockAnimState = -1;
     #blockAnimTimer = Fighter.defaultBlockAnimTimer;
 
+    // ⚠️ Hitboxes offset differs when !facingRight
     static hitboxesOffset = [
         { x: 15, y: 12 },
         { x: 10, y: 18 },
@@ -46,6 +52,13 @@ export class Fighter {
         { x: 15, y: 26 }
     ]
     #hitboxes = [];
+    static fistHitBoxOffsetStart0 = { x: 21, y: 23 };
+    static fistHitBoxOffsetEnd0 = { x: 29, y: 20 };
+    static fistHitBoxOffsetStart1 = { x: 22, y: 21 };
+    static fistHitBoxOffsetEnd1 = { x: 29, y: 18 };
+    #fistHitBoxOffsetStart = null;
+    #fistHitBoxOffsetEnd = null;
+    #fistHitBox = null;
 
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
@@ -57,10 +70,18 @@ export class Fighter {
             case 0:
                 this.#bodyImg = Fighter.bodyImg0;
                 this.#loc.x = 10;
+
+                this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart0;
+                this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd0;
                 break;
             case 1:
                 this.#bodyImg = Fighter.bodyImg1;
                 this.#loc.x = this.#engine.canvas.width - this.#size.w - 1;
+
+                this.#facingRight = false;
+
+                this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart1;
+                this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd1;
                 break;
         }
     }
@@ -72,17 +93,19 @@ export class Fighter {
 
     Begin() {
         this.#groundY = this.#engine.groundY - this.#size.h;
-
         this.#loc.y = this.#groundY;
 
         this.#hitboxes = [
-            new Circle(this.#loc.x + Fighter.hitboxesOffset[0].x, this.#loc.y + Fighter.hitboxesOffset[0].y, 6, "head"),
-            new Rect(this.#loc.x + Fighter.hitboxesOffset[1].x, this.#loc.y + Fighter.hitboxesOffset[1].y, 9, 9, "chest"),
-            new Rect(this.#loc.x + Fighter.hitboxesOffset[2].x, this.#loc.y + Fighter.hitboxesOffset[2].y, 4, 10, "arm_l"),
-            new Rect(this.#loc.x + Fighter.hitboxesOffset[3].x, this.#loc.y + Fighter.hitboxesOffset[3].y, 4, 10, "arm_r"),
-            new Rect(this.#loc.x + Fighter.hitboxesOffset[4].x, this.#loc.y + Fighter.hitboxesOffset[4].y, 4, 12, "leg_l"),
-            new Rect(this.#loc.x + Fighter.hitboxesOffset[5].x, this.#loc.y + Fighter.hitboxesOffset[5].y, 4, 12, "leg_r")
+            new Circle(0, 0, 6),    // Head
+            new Rect(0, 0, 9, 9),   // Chest
+            new Rect(0, 0, 4, 10),  // Arm Left
+            new Rect(0, 0, 4, 10),  // Arm Right
+            new Rect(0, 0, 4, 12),  // Leg Left
+            new Rect(0, 0, 4, 12)   // Leg Right
         ];
+        this.#fistHitBox = new Circle(0, 0, 4);
+
+        this.#UpdateHitboxes();
     }
 
     Tick(deltaTime) {
@@ -126,6 +149,13 @@ export class Fighter {
             this.#vel.y = 0;
         }
 
+        // Face Opponent
+        const opponent = (this.#engine.fighter0 === this) ? this.#engine.fighter1 : this.#engine.fighter0;
+        this.#facingRight = this.#loc.x < opponent.loc.x;
+
+        // Update Hitboxes
+        this.#UpdateHitboxes();
+
         // Body Animation
         const moveIntensity = Math.abs(this.#vel.x) / moveSpeed;
         this.#bodyAnimTimer -= deltaTime * (1.0 + (moveIntensity * 1.0));
@@ -147,6 +177,33 @@ export class Fighter {
                     this.#punchAnimTimer += Fighter.defaultPunchAnimTimer;
                 }
             }
+
+            if (!this.#punchHasHit) {
+                this.#punchTimer += deltaTime;
+                if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
+                    const percent = (this.#punchTimer - this.#startPunchTrace) / (this.#endPunchTrace - this.#startPunchTrace);
+
+                    const dx = this.#fistHitBoxOffsetEnd.x - this.#fistHitBoxOffsetStart.x;
+                    const dy = this.#fistHitBoxOffsetEnd.y - this.#fistHitBoxOffsetStart.y;
+                    let localX = this.#fistHitBoxOffsetStart.x + (dx * percent);
+                    let localY = this.#fistHitBoxOffsetStart.y + (dy * percent);
+
+                    if (!this.#facingRight) localX = this.#size.w - localX;
+
+                    this.#fistHitBox.loc.x = (this.#loc.x + localX) | 0;
+                    this.#fistHitBox.loc.y = (this.#loc.y + localY) | 0;
+
+                    // const currentFistPos = this.getInterpolatedFist(t);
+
+                    // const hitLimb = this.checkCollision(currentFistPos, opponent);
+
+                    // if (hitLimb) {
+                    //     this.#punchHasHit = true;
+                    //     opponent.OnHit(hitLimb);
+                    //     this.handleHitEffects();
+                    // }
+                }
+            }
         } else {
             if (this.#punchCooldown > 0)
                 this.#punchCooldown -= deltaTime;
@@ -166,15 +223,6 @@ export class Fighter {
                     this.#blockAnimTimer += Fighter.defaultBlockAnimTimer;
                 }
             }
-        }
-
-        // Face Opponent
-        const opponent = (this.#engine.fighter0 === this) ? this.#engine.fighter1 : this.#engine.fighter0;
-        this.#facingRight = this.#loc.x < opponent.loc.x;
-
-        for (let i = 0; i < this.#hitboxes.length; i++) {
-            this.#hitboxes[i].loc.x = this.#loc.x + Fighter.hitboxesOffset[i].x;
-            this.#hitboxes[i].loc.y = this.#loc.y + Fighter.hitboxesOffset[i].y;
         }
     }
 
@@ -231,9 +279,7 @@ export class Fighter {
 
         ctx.restore();
 
-        if (Fighter.showHitboxes) {
-            this.#drawDebugHitboxes(ctx);
-        }
+        if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
     }
 
     Jump() {
@@ -246,6 +292,7 @@ export class Fighter {
             this.#punchAnimState = 0;
             this.#punchAnimTimer = Fighter.defaultPunchAnimTimer;
             this.#vel.x += this.moveInput * 60;
+            this.#punchTimer = 0;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
         }
     }
@@ -257,6 +304,23 @@ export class Fighter {
             this.#blockAnimState = 0;
             this.#blockAnimTimer = Fighter.defaultBlockAnimTimer;
             this.#vel.x = 0;
+        }
+    }
+
+    #UpdateHitboxes() {
+        for (let i = 0; i < this.#hitboxes.length; i++) {
+            const offset = Fighter.hitboxesOffset[i];
+            const hitbox = this.#hitboxes[i];
+
+            let localX = offset.x;
+
+            if (!this.#facingRight) {
+                const hitboxW = hitbox instanceof Rect ? hitbox.size.w : 0;
+                localX = this.#size.w - localX - hitboxW;
+            }
+
+            hitbox.loc.x = (this.#loc.x + localX) | 0;
+            hitbox.loc.y = (this.#loc.y + offset.y) | 0;
         }
     }
 
@@ -281,16 +345,13 @@ export class Fighter {
         ctx.fill();
         ctx.stroke();
 
-        // const fist = this.getFistHitbox();
-        // if (fist) {
-        //     ctx.strokeStyle = "rgba(255, 0, 0, 0.9)";
-        //     ctx.fillStyle = "rgba(255, 0, 0, 0.2)";
-            
-        //     ctx.beginPath();
-        //     ctx.arc(fist.x, fist.y, fist.radius, 0, Math.PI * 2);
-        //     ctx.fill();
-        //     ctx.stroke();
-        // }
+        if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
+            ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+            ctx.beginPath();
+            ctx.arc(this.#fistHitBox.loc.x, this.#fistHitBox.loc.y, this.#fistHitBox.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
 
         ctx.restore();
     }
