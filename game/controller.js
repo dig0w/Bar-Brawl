@@ -39,11 +39,11 @@ export class Controller {
 
         switch (this.#variant) {
             case 0:
-                inputs.MoveLeft = this.#keys["KeyA"];
-                inputs.MoveRight = this.#keys["KeyD"];
-                inputs.Jump = this.#keys["KeyW"];
-                inputs.Crouch = this.#keys["KeyS"];
-                inputs.Punch = this.#keys["KeyE"];
+                inputs.MoveLeft = this.#keys["ArrowLeft"];
+                inputs.MoveRight = this.#keys["ArrowRight"];
+                inputs.Jump = this.#keys["ArrowUp"];
+                inputs.Crouch = this.#keys["ArrowDown"];
+                inputs.Punch = this.#keys["KeyG"];
                 inputs.Block = this.#keys["KeyF"];
                 break;
             case 1:
@@ -51,8 +51,8 @@ export class Controller {
                 inputs.MoveRight = this.#keys["KeyK"];
                 inputs.Jump = this.#keys["KeyI"];
                 inputs.Crouch = this.#keys["KeyL"];
-                inputs.Punch = this.#keys["KeyU"];
-                inputs.Block = this.#keys["KeyH"];
+                inputs.Punch = this.#keys["KeyK"];
+                inputs.Block = this.#keys["KeyL"];
                 break;
         }
 
