@@ -1,5 +1,5 @@
 import { FighterEngine } from "./engine.js";
-import { Circle, Rect } from "./hitboxes.js";
+import { Circle, Intersects, Rect } from "./hitboxes.js";
 
 export class Fighter {
     static showHitboxes = false;
@@ -42,7 +42,6 @@ export class Fighter {
     #blockAnimState = -1;
     #blockAnimTimer = Fighter.defaultBlockAnimTimer;
 
-    // ⚠️ Hitboxes offset differs when !facingRight
     static hitboxesOffset = [
         { x: 15, y: 12 },
         { x: 10, y: 18 },
@@ -50,7 +49,7 @@ export class Fighter {
         { x: 16, y: 18 },
         { x: 12, y: 26 },
         { x: 15, y: 26 }
-    ]
+    ];
     #hitboxes = [];
     static fistHitBoxOffsetStart0 = { x: 21, y: 23 };
     static fistHitBoxOffsetEnd0 = { x: 29, y: 20 };
@@ -59,6 +58,10 @@ export class Fighter {
     #fistHitBoxOffsetStart = null;
     #fistHitBoxOffsetEnd = null;
     #fistHitBox = null;
+
+    static hitboxesDamage = [15, 10, 7, 7, 5, 5];
+    static maxHealth = 100;
+    #health = Fighter.maxHealth;
 
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
@@ -86,10 +89,12 @@ export class Fighter {
         }
     }
 
-    get loc() { return this.#loc; }
-    get size() { return this.#size; }
+    get loc() { return this.#loc }
+    get size() { return this.#size }
 
     get isGrounded() { return this.#loc.y >= this.#groundY }
+
+    get hitboxes() { return this.#hitboxes }
 
     Begin() {
         this.#groundY = this.#engine.groundY - this.#size.h;
@@ -193,15 +198,15 @@ export class Fighter {
                     this.#fistHitBox.loc.x = (this.#loc.x + localX) | 0;
                     this.#fistHitBox.loc.y = (this.#loc.y + localY) | 0;
 
-                    // const currentFistPos = this.getInterpolatedFist(t);
+                    for (let i = 0; i < opponent.hitboxes.length; i++) {
+                        const hitbox = opponent.hitboxes[i];
+                        if (Intersects(this.#fistHitBox, hitbox)) {
+                            this.#punchHasHit = true;
 
-                    // const hitLimb = this.checkCollision(currentFistPos, opponent);
-
-                    // if (hitLimb) {
-                    //     this.#punchHasHit = true;
-                    //     opponent.OnHit(hitLimb);
-                    //     this.handleHitEffects();
-                    // }
+                            opponent.TakeDamage(Fighter.hitboxesDamage[i]);
+                            break;
+                        }
+                    }
                 }
             }
         } else {
@@ -293,6 +298,7 @@ export class Fighter {
             this.#punchAnimTimer = Fighter.defaultPunchAnimTimer;
             this.#vel.x += this.moveInput * 60;
             this.#punchTimer = 0;
+            this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
         }
     }
@@ -324,32 +330,52 @@ export class Fighter {
         }
     }
 
+    TakeDamage(damage) {
+        let knockback = 300;
+
+        if (this.#blockAnimState == 1) {
+            damage *= 0.2;
+            knockback = knockback * 0.4;
+        }
+
+        this.#health -= damage;
+
+        this.#punchAnimState = -1;
+
+        this.#vel.x += this.#facingRight ? -knockback : knockback;
+
+        if (this.#health <= 0) {
+            this.#health = 0;
+            this.Die();
+        }
+    }
+
+    Die() {
+
+    }
+
 
     #drawDebugHitboxes(ctx) {
         ctx.save();
-        ctx.lineWidth = 1;
+        ctx.lineWidth = .5;
 
         ctx.strokeStyle = "rgba(0, 255, 0, 0.7)";
-        ctx.fillStyle = "rgba(0, 255, 0, 0.1)";
 
         const rectLimbs = [this.#hitboxes[1], this.#hitboxes[2], this.#hitboxes[3], this.#hitboxes[4], this.#hitboxes[5]];
         for (let rect of rectLimbs) {
             ctx.beginPath();
             ctx.rect(rect.loc.x, rect.loc.y, rect.size.w, rect.size.h);
-            ctx.fill();
             ctx.stroke();
         }
 
         ctx.beginPath();
         ctx.arc(this.#hitboxes[0].loc.x, this.#hitboxes[0].loc.y, this.#hitboxes[0].radius, 0, Math.PI * 2);
-        ctx.fill();
         ctx.stroke();
 
         if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
             ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
             ctx.beginPath();
             ctx.arc(this.#fistHitBox.loc.x, this.#fistHitBox.loc.y, this.#fistHitBox.radius, 0, Math.PI * 2);
-            ctx.fill();
             ctx.stroke();
         }
 
