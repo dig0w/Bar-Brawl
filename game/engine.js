@@ -86,6 +86,10 @@ export class FighterEngine {
         }
 
         this.#ctx.restore();
+
+        for (let i = 0; i < this.#objects.length; i++) {
+            if (this.#objects[i].DrawUI) this.#objects[i].DrawUI(this.#ctx);
+        }
     }
 
     DestroyObject(obj) {

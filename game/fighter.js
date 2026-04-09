@@ -4,6 +4,7 @@ import { Circle, Intersects, Rect } from "./hitboxes.js";
 export class Fighter {
     static showHitboxes = false;
     #engine = null;
+    #variant = -1;
 
     #size = { w: 32, h: 39 };
     #loc = { x: 0, y: 0 };
@@ -62,12 +63,23 @@ export class Fighter {
     static hitboxesDamage = [15, 10, 7, 7, 5, 5];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
+    static defaultGhostTimer = 4 / 60;
+    #ghostHealth = 100;
+    #ghostTimer = Fighter.defaultGhostTimer;
+    static healthBar = Object.assign(new Image(), { src: "assets/health_bar.png" });
+    static healthBarSize = { w: 41, h: 5 };
+    static healthBarLoc = { x: 3, y: 5 };
+
+    static iconImg0 = Object.assign(new Image(), { src: "assets/bald_icon.png" });
+    static iconImg1 = Object.assign(new Image(), { src: "assets/biker_icon.png" });
+    #iconImg = null;
 
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
 
         this.#engine = engine;
+        this.#variant = variant;
 
         switch (variant) {
             case 0:
@@ -76,6 +88,8 @@ export class Fighter {
 
                 this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart0;
                 this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd0;
+
+                this.#iconImg = Fighter.iconImg0;
                 break;
             case 1:
                 this.#bodyImg = Fighter.bodyImg1;
@@ -85,6 +99,8 @@ export class Fighter {
 
                 this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart1;
                 this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd1;
+
+                this.#iconImg = Fighter.iconImg1;
                 break;
         }
     }
@@ -229,6 +245,14 @@ export class Fighter {
                 }
             }
         }
+
+        // Health Bar Animation
+        if (this.#ghostTimer > 0) {
+            this.#ghostTimer -= deltaTime;
+        } else if (this.#ghostHealth > this.#health) {
+            this.#ghostHealth -= 20 * deltaTime;
+            if (this.#ghostHealth < this.#health) this.#ghostHealth = this.#health;
+        }
     }
 
     Draw(ctx) {
@@ -287,6 +311,42 @@ export class Fighter {
         if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
     }
 
+    DrawUI(ctx) {
+        // Health Bar
+        const healthPercent = this.#health / Fighter.maxHealth;
+        const ghostPercent = this.#ghostHealth / Fighter.maxHealth;
+
+        const isVariantZero = this.#variant == 0;
+        const locX = (isVariantZero ? Fighter.healthBarLoc.x : this.#engine.canvas.width - Fighter.healthBarSize.w - Fighter.healthBarLoc.x);
+
+        ctx.save();
+        if (!isVariantZero) {
+            ctx.translate(locX + Fighter.healthBarSize.w / 2, 0);
+            ctx.scale(-1, 1);
+            ctx.translate(-(locX + Fighter.healthBarSize.w / 2), 0);
+        }
+
+        // Empty Bar
+        ctx.drawImage(Fighter.healthBar, 0, 0, (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0),
+                    (locX | 0), (Fighter.healthBarLoc.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0));
+
+        // Ghost Bar
+        const ghostWidth = (Fighter.healthBarSize.w * ghostPercent) | 0;
+        ctx.drawImage(Fighter.healthBar, 0, (Fighter.healthBarSize.h * 2 | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0),
+                    (locX | 0), (Fighter.healthBarLoc.y | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0));
+
+        // Filled Bar
+        const fillWidth = (Fighter.healthBarSize.w * healthPercent) | 0;
+        ctx.drawImage(Fighter.healthBar, 0, (Fighter.healthBarSize.h | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0),
+                    (locX | 0), (Fighter.healthBarLoc.y | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0));
+
+        // Fighter Icon
+        ctx.drawImage(this.#iconImg, 0, 0, 9, 9,
+                    ((locX + 1) | 0), 0, 9, 9);
+
+        ctx.restore();
+    }
+
     Jump() {
         if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.isGrounded)
             this.#vel.y -= this.#jumpForce;
@@ -343,6 +403,8 @@ export class Fighter {
         this.#punchAnimState = -1;
 
         this.#vel.x += this.#facingRight ? -knockback : knockback;
+
+        this.#ghostTimer = Fighter.defaultGhostTimer;
 
         if (this.#health <= 0) {
             this.#health = 0;
