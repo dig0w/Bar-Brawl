@@ -16,6 +16,14 @@ export class FighterEngine {
     #fighter0 = null;
     #fighter1 = null;
 
+    static maxRounds = 3;
+    #rounds = 0;
+
+    #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
+
+    #uiTimer = 0;
+    #uiText = "";
+
     constructor() {
     }
 
@@ -52,11 +60,28 @@ export class FighterEngine {
         for (let i = 0; i < this.#objects.length; i++) {
             this.#objects[i].Begin();
         }
+
+        this.StartRound();
     }
 
     Tick(deltaTime) {
-        for (let i = this.#objects.length - 1; i >= 0; i--) {
-            this.#objects[i].Tick(deltaTime);
+        if (this.#gameState === "FIGHTING") {
+            for (let i = this.#objects.length - 1; i >= 0; i--) {
+                this.#objects[i].Tick(deltaTime);
+            }
+        }
+
+        if (this.#uiTimer > 0) {
+            this.#uiTimer -= deltaTime;
+
+            if (this.#uiTimer <= 1.0 && this.#uiText !== "FIGHT!") {
+                this.#uiText = "FIGHT!";
+            }
+
+            if (this.#uiTimer <= 0) {
+                this.#uiText = "";
+                this.#gameState = "FIGHTING";
+            }
         }
     }
 
@@ -90,6 +115,22 @@ export class FighterEngine {
         for (let i = 0; i < this.#objects.length; i++) {
             if (this.#objects[i].DrawUI) this.#objects[i].DrawUI(this.#ctx);
         }
+
+        if (this.#uiText !== "") {
+            this.#ctx.textAlign = "center";
+            this.#ctx.textBaseline = "middle";
+
+            this.#ctx.font = "bold 16px 'Courier New', monospace"; 
+            this.#ctx.fillStyle = "white";
+            this.#ctx.strokeStyle = "black";
+            this.#ctx.lineWidth = 2;
+
+            const centerX = this.canvas.width / 2;
+            const centerY = this.canvas.height / 2.5;
+
+            this.#ctx.strokeText(this.#uiText, centerX, centerY);
+            this.#ctx.fillText(this.#uiText, centerX, centerY);
+        }
     }
 
     DestroyObject(obj) {
@@ -98,5 +139,30 @@ export class FighterEngine {
             this.#objects[index] = null;
             this.#objects.splice(index, 1);
         }
+    }
+
+    StartRound() {
+        if (this.#rounds == FighterEngine.maxRounds) {
+            // Game Over
+        }
+
+        this.#gameState = "PRE_ROUND";
+
+        this.#fighter0.Reset(); 
+        this.#fighter1.Reset();
+
+        this.#uiText = `ROUND ${this.#rounds + 1}`;
+        this.#uiTimer = 2.0;
+
+        this.#rounds++;
+    }
+
+    RoundOver() {
+        this.#gameState = "POS_ROUND";
+    }
+
+    GameOver() {
+        this.#gameState = "GAME_OVER";
+        return;
     }
 }

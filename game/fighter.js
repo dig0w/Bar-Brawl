@@ -74,6 +74,11 @@ export class Fighter {
     static iconImg1 = Object.assign(new Image(), { src: "assets/biker_icon.png" });
     #iconImg = null;
 
+    #roundsWon = 0;
+    static winsBar = Object.assign(new Image(), { src: "assets/wins_bar.png" });
+    static winsBarSize = { w: 11, h: 2 };
+    static winsBarLoc = { x: 5, y: 10 };
+
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
@@ -312,11 +317,12 @@ export class Fighter {
     }
 
     DrawUI(ctx) {
+        const isVariantZero = this.#variant == 0;
+
         // Health Bar
         const healthPercent = this.#health / Fighter.maxHealth;
         const ghostPercent = this.#ghostHealth / Fighter.maxHealth;
 
-        const isVariantZero = this.#variant == 0;
         const locX = (isVariantZero ? Fighter.healthBarLoc.x : this.#engine.canvas.width - Fighter.healthBarSize.w - Fighter.healthBarLoc.x);
 
         ctx.save();
@@ -343,6 +349,19 @@ export class Fighter {
         // Fighter Icon
         ctx.drawImage(this.#iconImg, 0, 0, 9, 9,
                     ((locX + 1) | 0), 0, 9, 9);
+
+        // Wins Bar
+        const winPercent = this.#roundsWon / (FighterEngine.maxRounds - 1);
+        const locXw = (isVariantZero ? Fighter.winsBarLoc.x : this.#engine.canvas.width - Fighter.healthBarSize.w - 1);
+
+        // Empty Bar
+        ctx.drawImage(Fighter.winsBar, 0, 0, (Fighter.winsBarSize.w | 0), (Fighter.winsBarSize.h | 0),
+                    (locXw | 0), (Fighter.winsBarLoc.y | 0), (Fighter.winsBarSize.w | 0), (Fighter.winsBarSize.h | 0));
+        
+        // Filled Bar
+        const fillWidthw = (Fighter.winsBarSize.w * winPercent) | 0;
+        ctx.drawImage(Fighter.winsBar, 0, (Fighter.winsBarSize.h | 0), (fillWidthw | 0), (Fighter.winsBarSize.h | 0),
+                    (locXw | 0), (Fighter.winsBarLoc.y | 0), (fillWidthw | 0), (Fighter.winsBarSize.h | 0));
 
         ctx.restore();
     }
@@ -414,6 +433,18 @@ export class Fighter {
 
     Die() {
 
+    }
+
+    Reset() {
+        if (this.#variant == 0) this.#loc.x = 10;
+        else this.#loc.x = this.#engine.canvas.width - this.#size.w - 1;
+        
+        this.#loc.y = this.#groundY;
+
+        this.#vel.x = 0;
+        this.#vel.y = 0;
+
+        this.#facingRight = this.#variant == 0;
     }
 
 
