@@ -21,8 +21,13 @@ export class FighterEngine {
 
     #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
 
-    #uiTimer = 0;
-    #uiText = "";
+    #uiRoundText = "";
+    static defaultUiRoundTimer = 1;
+    #uiRoundTimer = FighterEngine.defaultUiRoundTimer;
+    #uiRoundLoc = { x: .5, y: .4 };
+    static defaultUiRoundAfterTimer = .5;
+    #uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
+    #uiRoundAfterLoc = { x: .5, y: 5 };
 
     constructor() {
     }
@@ -61,6 +66,9 @@ export class FighterEngine {
             this.#objects[i].Begin();
         }
 
+        this.#uiRoundLoc.x *= this.#canvas.width;
+        this.#uiRoundLoc.y *= this.#canvas.height;
+        this.#uiRoundAfterLoc.x *= this.#canvas.width;
         this.StartRound();
     }
 
@@ -71,17 +79,16 @@ export class FighterEngine {
             }
         }
 
-        if (this.#uiTimer > 0) {
-            this.#uiTimer -= deltaTime;
+        if (this.#uiRoundTimer > 0) {
+            this.#uiRoundTimer -= deltaTime;
 
-            if (this.#uiTimer <= 1.0 && this.#uiText !== "FIGHT!") {
-                this.#uiText = "FIGHT!";
+            if (this.#uiRoundTimer <= 0) {
+                this.#uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
             }
+        }
 
-            if (this.#uiTimer <= 0) {
-                this.#uiText = "";
-                this.#gameState = "FIGHTING";
-            }
+        if (this.#uiRoundAfterTimer > 0) {
+            this.#uiRoundAfterTimer -= deltaTime;
         }
     }
 
@@ -116,7 +123,7 @@ export class FighterEngine {
             if (this.#objects[i].DrawUI) this.#objects[i].DrawUI(this.#ctx);
         }
 
-        if (this.#uiText !== "") {
+        if (this.#uiRoundTimer > 0) {
             this.#ctx.textAlign = "center";
             this.#ctx.textBaseline = "middle";
 
@@ -125,11 +132,13 @@ export class FighterEngine {
             this.#ctx.strokeStyle = "black";
             this.#ctx.lineWidth = 2;
 
-            const centerX = this.canvas.width / 2;
-            const centerY = this.canvas.height / 2.5;
+            this.#ctx.strokeText(this.#uiRoundText, this.#uiRoundLoc.x, this.#uiRoundLoc.y);
+            this.#ctx.fillText(this.#uiRoundText, this.#uiRoundLoc.x, this.#uiRoundLoc.y);
+        }
 
-            this.#ctx.strokeText(this.#uiText, centerX, centerY);
-            this.#ctx.fillText(this.#uiText, centerX, centerY);
+        if (this.#uiRoundAfterTimer > 0) {
+            // Interpolate start position to end pos
+            // and font sizes
         }
     }
 
@@ -151,8 +160,8 @@ export class FighterEngine {
         this.#fighter0.Reset(); 
         this.#fighter1.Reset();
 
-        this.#uiText = `ROUND ${this.#rounds + 1}`;
-        this.#uiTimer = 2.0;
+        this.#uiRoundTimer = FighterEngine.defaultUiRoundTimer;
+        this.#uiRoundText = `Round ${this.#rounds}`;
 
         this.#rounds++;
     }
