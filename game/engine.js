@@ -25,9 +25,11 @@ export class FighterEngine {
     static defaultUiRoundTimer = 1;
     #uiRoundTimer = FighterEngine.defaultUiRoundTimer;
     #uiRoundLoc = { x: .5, y: .4 };
+    static uiRoundSize = 16;
     static defaultUiRoundAfterTimer = .5;
     #uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
     #uiRoundAfterLoc = { x: .5, y: 5 };
+    static uiRoundAfterSize = 8;
 
     constructor() {
     }
@@ -134,11 +136,35 @@ export class FighterEngine {
 
             this.#ctx.strokeText(this.#uiRoundText, this.#uiRoundLoc.x, this.#uiRoundLoc.y);
             this.#ctx.fillText(this.#uiRoundText, this.#uiRoundLoc.x, this.#uiRoundLoc.y);
-        }
+        } else if (this.#uiRoundAfterTimer > 0) {
+            const percent = this.#uiRoundAfterTimer / FighterEngine.defaultUiRoundAfterTimer;
 
-        if (this.#uiRoundAfterTimer > 0) {
-            // Interpolate start position to end pos
-            // and font sizes
+            const locX = this.#uiRoundAfterLoc.x - (this.#uiRoundLoc.x - this.#uiRoundAfterLoc.x) * percent;
+            const locY = this.#uiRoundAfterLoc.y - (this.#uiRoundLoc.y - this.#uiRoundAfterLoc.y) * percent;
+
+            const fontSize = FighterEngine.uiRoundAfterSize - (FighterEngine.uiRoundSize - FighterEngine.uiRoundAfterSize) * percent;
+
+            this.#ctx.textAlign = "center";
+            this.#ctx.textBaseline = "middle";
+
+            this.#ctx.font = `bold ${fontSize}px 'Courier New', monospace`; 
+            this.#ctx.fillStyle = "white";
+            this.#ctx.strokeStyle = "black";
+            this.#ctx.lineWidth = 2;
+
+            this.#ctx.strokeText(this.#uiRoundText, locX, locY);
+            this.#ctx.fillText(this.#uiRoundText, locX, locY);
+        } else if (this.#uiRoundText != "") {
+            this.#ctx.textAlign = "center";
+            this.#ctx.textBaseline = "middle";
+
+            this.#ctx.font = `bold ${FighterEngine.uiRoundAfterSize}px 'Courier New', monospace`; 
+            this.#ctx.fillStyle = "white";
+            this.#ctx.strokeStyle = "black";
+            this.#ctx.lineWidth = 2;
+
+            this.#ctx.strokeText(this.#uiRoundText, this.#uiRoundAfterLoc.x, this.#uiRoundAfterLoc.y);
+            this.#ctx.fillText(this.#uiRoundText, this.#uiRoundAfterLoc.x, this.#uiRoundAfterLoc.y);
         }
     }
 
@@ -161,13 +187,15 @@ export class FighterEngine {
         this.#fighter1.Reset();
 
         this.#uiRoundTimer = FighterEngine.defaultUiRoundTimer;
-        this.#uiRoundText = `Round ${this.#rounds}`;
+        this.#uiRoundText = `Round ${this.#rounds + 1}`;
 
         this.#rounds++;
     }
 
     RoundOver() {
         this.#gameState = "POS_ROUND";
+
+        this.#uiRoundText = ``;
     }
 
     GameOver() {
