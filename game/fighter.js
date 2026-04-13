@@ -66,18 +66,18 @@ export class Fighter {
     static defaultGhostTimer = 4 / 60;
     #ghostHealth = 100;
     #ghostTimer = Fighter.defaultGhostTimer;
-    static healthBar = Object.assign(new Image(), { src: "assets/health_bar.png" });
     static healthBarSize = { w: 41, h: 5 };
+    static healthBarStartPos = { x: 0, y: 16 };
     static healthBarLoc = { x: 3, y: 5 };
 
-    static iconImg0 = Object.assign(new Image(), { src: "assets/bald_icon.png" });
-    static iconImg1 = Object.assign(new Image(), { src: "assets/biker_icon.png" });
-    #iconImg = null;
-
     #roundsWon = 0;
-    static winsBar = Object.assign(new Image(), { src: "assets/wins_bar.png" });
     static winsBarSize = { w: 11, h: 2 };
+    static winsBarStartPos = { x: 0, y: 21 };
     static winsBarLoc = { x: 5, y: 10 };
+
+    #iconStartPos = { x: this.#size.w * 3 + 5, y: 5 };
+    static iconStartSize = { w: 21, h: 21 };
+    static iconSize = { w: 9, h: 9 };
 
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
@@ -93,19 +93,15 @@ export class Fighter {
 
                 this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart0;
                 this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd0;
-
-                this.#iconImg = Fighter.iconImg0;
                 break;
             case 1:
                 this.#bodyImg = Fighter.bodyImg1;
-                this.#loc.x = this.#engine.canvas.width - this.#size.w - 1;
+                this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
 
                 this.#facingRight = false;
 
                 this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart1;
                 this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd1;
-
-                this.#iconImg = Fighter.iconImg1;
                 break;
         }
     }
@@ -323,7 +319,7 @@ export class Fighter {
         const healthPercent = this.#health / Fighter.maxHealth;
         const ghostPercent = this.#ghostHealth / Fighter.maxHealth;
 
-        const locX = (isVariantZero ? Fighter.healthBarLoc.x : this.#engine.canvas.width - Fighter.healthBarSize.w - Fighter.healthBarLoc.x);
+        const locX = (isVariantZero ? Fighter.healthBarLoc.x : this.#engine.canvasSize.w - Fighter.healthBarSize.w - Fighter.healthBarLoc.x);
 
         ctx.save();
         if (!isVariantZero) {
@@ -333,35 +329,37 @@ export class Fighter {
         }
 
         // Empty Bar
-        ctx.drawImage(Fighter.healthBar, 0, 0, (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0),
+        ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarStartPos.x | 0), (Fighter.healthBarStartPos.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0));
 
         // Ghost Bar
         const ghostWidth = (Fighter.healthBarSize.w * ghostPercent) | 0;
-        ctx.drawImage(Fighter.healthBar, 0, (Fighter.healthBarSize.h * 2 | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0),
+        ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarSize.w * 2 + Fighter.healthBarStartPos.x | 0), (Fighter.healthBarStartPos.y | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0));
 
         // Filled Bar
         const fillWidth = (Fighter.healthBarSize.w * healthPercent) | 0;
-        ctx.drawImage(Fighter.healthBar, 0, (Fighter.healthBarSize.h | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0),
+        ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarSize.w + Fighter.healthBarStartPos.x), (Fighter.healthBarStartPos.y | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0));
-
-        // Fighter Icon
-        ctx.drawImage(this.#iconImg, 0, 0, 9, 9,
-                    ((locX + 1) | 0), 0, 9, 9);
 
         // Wins Bar
         const winPercent = this.#roundsWon / (FighterEngine.maxRounds - 1);
-        const locXw = (isVariantZero ? Fighter.winsBarLoc.x : this.#engine.canvas.width - Fighter.healthBarSize.w - 1);
+        const locXw = (isVariantZero ? Fighter.winsBarLoc.x : this.#engine.canvasSize.w - Fighter.healthBarSize.w - 1);
 
         // Empty Bar
-        ctx.drawImage(Fighter.winsBar, 0, 0, (Fighter.winsBarSize.w | 0), (Fighter.winsBarSize.h | 0),
+        ctx.drawImage(FighterEngine.uiSheet, (Fighter.winsBarStartPos.x | 0), (Fighter.winsBarStartPos.y | 0), (Fighter.winsBarSize.w | 0), (Fighter.winsBarSize.h | 0),
                     (locXw | 0), (Fighter.winsBarLoc.y | 0), (Fighter.winsBarSize.w | 0), (Fighter.winsBarSize.h | 0));
-        
+
         // Filled Bar
         const fillWidthw = (Fighter.winsBarSize.w * winPercent) | 0;
-        ctx.drawImage(Fighter.winsBar, 0, (Fighter.winsBarSize.h | 0), (fillWidthw | 0), (Fighter.winsBarSize.h | 0),
+        ctx.drawImage(FighterEngine.uiSheet, (Fighter.winsBarSize.w + Fighter.winsBarStartPos.x | 0), (Fighter.winsBarStartPos.y | 0), (fillWidthw | 0), (Fighter.winsBarSize.h | 0),
                     (locXw | 0), (Fighter.winsBarLoc.y | 0), (fillWidthw | 0), (Fighter.winsBarSize.h | 0));
+
+        // Fighter Icon
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(this.#bodyImg, (this.#iconStartPos.x | 0), (this.#iconStartPos.y | 0), Fighter.iconStartSize.w, Fighter.iconStartSize.h,
+                    ((locX + 1) | 0), 0, Fighter.iconSize.w, Fighter.iconSize.h);
+        ctx.imageSmoothingEnabled = false;
 
         ctx.restore();
     }
@@ -437,7 +435,7 @@ export class Fighter {
 
     Reset() {
         if (this.#variant == 0) this.#loc.x = 10;
-        else this.#loc.x = this.#engine.canvas.width - this.#size.w - 1;
+        else this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
         
         this.#loc.y = this.#groundY;
 
