@@ -149,7 +149,6 @@ export class Fighter {
         this.#loc.y += this.#vel.y * deltaTime;
         this.#loc.x += this.#vel.x * deltaTime;
 
-
         // X Bounds
         const maxBoundary = this.#engine.worldWidth - this.#size.w;
         if (this.#loc.x > maxBoundary) {

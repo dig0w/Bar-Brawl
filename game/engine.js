@@ -23,6 +23,11 @@ export class FighterEngine {
     #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
+    #redFontSheet = null;
+    #greenFontSheet = null;
+    static tCanvas = document.createElement("canvas");
+    static tCtx = FighterEngine.tCanvas.getContext("2d");
+
     #uiRoundText = "";
     static defaultUiRoundTimer = .75;
     #uiRoundTimer = FighterEngine.defaultUiRoundTimer;
@@ -32,6 +37,14 @@ export class FighterEngine {
     #uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
     #uiRoundAfterLoc = { x: .5, y: 11 };
     static uiRoundAfterSize = 8;
+    static uiRoundFillColor = "#feffff";
+    static uiRoundOutlineColor = "#545454";
+
+    static defaultUiFightTimer = .75;
+    #uiFightTimer = 0;
+    #uiFightDone = false;
+    static uiFightFillColor = "#ddb918";
+    static uiFightOutlineColor = "#df2817";
 
     constructor() {
     }
@@ -79,6 +92,14 @@ export class FighterEngine {
         this.#uiRoundLoc.y *= this.#canvas.height;
         this.#uiRoundAfterLoc.x *= this.#canvas.width;
         this.StartRound();
+
+        FighterEngine.uiSheet.onload = () => {
+            console.log("b");
+            this.#redFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "r");
+            this.#greenFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "g");
+        }
+        console.log("a");
+        console.log(FighterEngine.redFontSheet, FighterEngine.uiSheet);
     }
 
     Tick(deltaTime) {
@@ -100,8 +121,18 @@ export class FighterEngine {
             }
         } else if (this.#uiRoundAfterTimer > 0) {
             this.#uiRoundAfterTimer -= deltaTime;
-        } else {
 
+            if (this.#uiRoundAfterTimer <= 0) {
+                this.#uiFightTimer = FighterEngine.defaultUiFightTimer;
+                this.#uiFightDone = false;
+            }
+        } else if (this.#uiFightTimer > 0) {
+            this.#uiFightTimer -= deltaTime;
+
+            if (this.#uiFightTimer <= FighterEngine.defaultUiFightTimer / 3 && !this.#uiFightDone) {
+                this.#uiFightDone = true;
+                this.#gameState = "FIGHTING";
+            }
         }
     }
 
@@ -134,15 +165,16 @@ export class FighterEngine {
         }
 
         this.#ctx.restore();
-        
+
         for (let i = 0; i < this.#objects.length; i++) {
             if (this.#objects[i].DrawUI) this.#objects[i].DrawUI(this.#ctx);
         }
 
         this.#ctx.restore();
+        this.#ctx.save();
 
         if (this.#uiRoundTimer > 0) {
-            this.DrawPixelText(this.#ctx, this.#uiRoundText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (FighterEngine.uiRoundSize | 0));
+            this.DrawPixelText(this.#ctx, this.#uiRoundText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (FighterEngine.uiRoundSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
         } else if (this.#uiRoundAfterTimer > 0) {
             const percent = this.#uiRoundAfterTimer / FighterEngine.defaultUiRoundAfterTimer;
 
@@ -150,10 +182,31 @@ export class FighterEngine {
             const locY = this.#uiRoundAfterLoc.y + (this.#uiRoundLoc.y - this.#uiRoundAfterLoc.y) * percent;
             const fontSize = FighterEngine.uiRoundAfterSize + (FighterEngine.uiRoundSize - FighterEngine.uiRoundAfterSize) * percent;
 
-            this.DrawPixelText(this.#ctx, this.#uiRoundText, (locX | 0), (locY | 0), (fontSize | 0));
+            this.DrawPixelText(this.#ctx, this.#uiRoundText, (locX | 0), (locY | 0), (fontSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
         } else if (this.#uiRoundText != "") {
-            this.DrawPixelText(this.#ctx, this.#uiRoundText, (this.#uiRoundAfterLoc.x | 0), (this.#uiRoundAfterLoc.y | 0), (FighterEngine.uiRoundAfterSize | 0));
+            this.DrawPixelText(this.#ctx, this.#uiRoundText, (this.#uiRoundAfterLoc.x | 0), (this.#uiRoundAfterLoc.y | 0), (FighterEngine.uiRoundAfterSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
         }
+
+        if (this.#uiFightTimer > 0) {
+            const t = FighterEngine.defaultUiFightTimer - this.#uiFightTimer;
+            const third = FighterEngine.defaultUiFightTimer / 3;
+            let fontSize = 0;
+
+            if (t <= third) {
+                const percent = t / third;
+                fontSize = FighterEngine.uiRoundSize * percent;
+
+            } else if (t <= 2 * third) {
+                fontSize = FighterEngine.uiRoundSize;
+            } else {
+                const percent = (t - 2 * third) / third;
+                fontSize = FighterEngine.uiRoundSize * (1 - percent);
+            }
+
+            this.DrawPixelText(this.#ctx, "Fight!", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
+        }
+
+        this.#ctx.restore();
     }
 
     DestroyObject(obj) {
@@ -192,26 +245,29 @@ export class FighterEngine {
     }
 
 
-    DrawPixelText(ctx, text, x, y, size = 5) {
-        const srcW = 8;
-        const srcH = 8;
+    DrawPixelText(ctx, text, x, y, size = 5, fillColor = "white", outlineColor = "black") {
+        if (!this.#redFontSheet || !this.#greenFontSheet || size <= 0) return;
 
-        const outH = size;
-        const outW = (size * (srcW / srcH)) | 0;
+        const srcSize = { w: 8, h: 8 };
+        const outSize = { w: (size * (srcSize.w / srcSize.h)) | 0, h: size };
 
-        const spacing = 1;
-        const spaceWidth = (outW / 3) | 0;
+        const spacing = 0;
+        const spaceWidth = (outSize.w / 3) | 0;
 
         const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!? ";
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {
             const char = text[i].toUpperCase();
-            totalWidth += (char === " ") ? spaceWidth : outW;
+            totalWidth += (char === " ") ? spaceWidth : outSize.w;
             if (i < text.length - 1) totalWidth += spacing;
         }
 
         let currentX = (x - totalWidth / 2) | 0;
+
+        FighterEngine.tCanvas.width = outSize.w;
+        FighterEngine.tCanvas.height = outSize.h;
+        FighterEngine.tCtx.imageSmoothingEnabled = false;
 
         for (let i = 0; i < text.length; i++) {
             if (i != 0) currentX += spacing;
@@ -227,21 +283,71 @@ export class FighterEngine {
 
             let sX, sY;
             if (index < 26) {
-                sX = index * srcW;
+                sX = index * srcSize.w;
                 sY = 0;
             } else {
-                sX = (index - 26) * srcW;
-                sY = srcH;
+                sX = (index - 26) * srcSize.w;
+                sY = srcSize.h;
             }
 
-            ctx.drawImage(
-                FighterEngine.uiSheet,
-                sX, sY, srcW, srcH,
-                currentX, (y | 0),
-                outW, outH
-            );
+            const drawLayer = (sheet, color) => {
+                FighterEngine.tCtx.clearRect(0, 0, outSize.w, outSize.h);
+                FighterEngine.tCtx.globalCompositeOperation = "source-over";
 
-            currentX += outW;
+                FighterEngine.tCtx.drawImage(
+                    sheet,
+                    sX, sY, srcSize.w, srcSize.h,
+                    0, 0,
+                    outSize.w, outSize.h
+                );
+
+                FighterEngine.tCtx.globalCompositeOperation = "source-in";
+                FighterEngine.tCtx.fillStyle = color;
+                FighterEngine.tCtx.fillRect(0, 0, outSize.w, outSize.h);
+
+                ctx.drawImage(FighterEngine.tCanvas, currentX, (y | 0));
+            };
+            
+            drawLayer(this.#greenFontSheet, fillColor);
+            drawLayer(this.#redFontSheet, outlineColor);
+
+            currentX += outSize.w;
         }
+    }
+
+    static extractChannelMask(image, channel = "r") {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        ctx.drawImage(image, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+
+        const ch =
+            channel === "r" ? 0 :
+            channel === "g" ? 1 :
+            channel === "b" ? 2 :
+            0;
+
+        for (let i = 0; i < data.length; i += 4) {
+            const value = data[i + ch];
+
+            if (value > 0) {
+                data[i] = 255;
+                data[i + 1] = 255;
+                data[i + 2] = 255;
+                data[i + 3] = 255;
+            } else {
+                data[i + 3] = 0;
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+
+        return canvas;
     }
 }
