@@ -17,10 +17,10 @@ export class FighterEngine {
     #fighter0 = null;
     #fighter1 = null;
 
+    #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
     static maxRounds = 3;
     #rounds = 0;
 
-    #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;

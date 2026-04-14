@@ -327,19 +327,46 @@ export class Fighter {
             ctx.translate(-(locX + Fighter.healthBarSize.w / 2), 0);
         }
 
+        const scale = 2;
+        const slope = Fighter.healthBarSize.h | 0;
+
         // Empty Bar
         ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarStartPos.x | 0), (Fighter.healthBarStartPos.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0));
 
         // Ghost Bar
         const ghostWidth = (Fighter.healthBarSize.w * ghostPercent) | 0;
+        ctx.save();
+        ctx.beginPath();
+        for (let y = 0; y < Fighter.healthBarSize.h; y++) {
+            const offset = y;
+            const width = ghostWidth - offset;
+
+            ctx.rect(locX | 0, (Fighter.healthBarLoc.y + y) | 0, width | 0, 1);
+        }
+        ctx.closePath();
+        ctx.clip();
+
         ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarSize.w * 2 + Fighter.healthBarStartPos.x | 0), (Fighter.healthBarStartPos.y | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (ghostWidth | 0), (Fighter.healthBarSize.h | 0));
+        ctx.restore();
 
         // Filled Bar
         const fillWidth = (Fighter.healthBarSize.w * healthPercent) | 0;
+        ctx.save();
+        ctx.beginPath();
+        for (let y = 0; y < Fighter.healthBarSize.h; y++) {
+            const offset = y;
+            const width = fillWidth - offset;
+
+            ctx.rect(locX | 0, (Fighter.healthBarLoc.y + y) | 0, width | 0, 1);
+        }
+        ctx.closePath();
+        ctx.clip();
+
         ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarSize.w + Fighter.healthBarStartPos.x), (Fighter.healthBarStartPos.y | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (fillWidth | 0), (Fighter.healthBarSize.h | 0));
+        ctx.restore();
 
         // Wins Bar
         const winPercent = this.#roundsWon / (FighterEngine.maxRounds - 1);
