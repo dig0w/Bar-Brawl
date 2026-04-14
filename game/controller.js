@@ -9,7 +9,6 @@ export class Controller {
     #keys = {};
     #jumpReleased = false;
     #punchReleased = false;
-    #blockReleased = false
 
     constructor(engine, pawn, variant = 0) {
         if (!(engine instanceof FighterEngine))
@@ -79,4 +78,12 @@ export class Controller {
     }
 
     Draw() { }
+
+    Reset() {
+        this.#keys = {};
+        this.#jumpReleased = false;
+        this.#punchReleased = false;
+
+        this.#pawn.moveInput = 0;
+    }
 }

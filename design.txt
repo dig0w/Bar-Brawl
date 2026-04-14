@@ -54,3 +54,5 @@ To do:
     Punch damage should consider the velocity in oponnents direction
     Jump animations
     Punched animations
+    Idle Fightig Stance animations
+    Game over Screen

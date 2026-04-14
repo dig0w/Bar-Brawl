@@ -16,10 +16,14 @@ export class FighterEngine {
 
     #fighter0 = null;
     #fighter1 = null;
+    #ctrl0 = null;
+    #ctrl1 = null;
 
     #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
     static maxRounds = 3;
     #rounds = 0;
+    #scoreF0 = 0;
+    #scoreF1 = 0;
 
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
@@ -46,6 +50,18 @@ export class FighterEngine {
     static uiFightFillColor = "#ddb918";
     static uiFightOutlineColor = "#df2817";
 
+    #uiWinnerText = "";
+    static defaultUiWinnerTimer = 1.5;
+    #uiWinnerTimer = 0;
+    static uiWinnerFillColor = "#feffff";
+    static uiWinnerOutlineColor = "#545454";
+
+    #fadeColor = "#000";
+    #fadeAlpha = 0;
+    #fadeDuration = 0;
+    #fadeTimer = 0;
+    #fadeDirection = 0; // 1 = fade to, -1 = fade from, 0 = none
+
     constructor() {
     }
 
@@ -59,6 +75,8 @@ export class FighterEngine {
 
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
+
+    getScore(fighter) { return fighter == this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
 
     Begin() {
         this.#canvas = document.getElementById("game-canvas");
@@ -75,14 +93,14 @@ export class FighterEngine {
         this.#fighter0 = new Fighter(this, 0);
         this.#objects.push(this.#fighter0);
 
-        const ctrl0 = new Controller(this, this.#fighter0, 0);
-        this.#objects.push(ctrl0);
+        this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+        this.#objects.push(this.#ctrl0);
 
         this.#fighter1 = new Fighter(this, 1);
         this.#objects.push(this.#fighter1);
 
-        const ctrl1 = new Controller(this, this.#fighter1, 1);
-        this.#objects.push(ctrl1);
+        this.#ctrl1 = new Controller(this, this.#fighter1, 1);
+        this.#objects.push(this.#ctrl1);
 
         for (let i = 0; i < this.#objects.length; i++) {
             this.#objects[i].Begin();
@@ -90,16 +108,14 @@ export class FighterEngine {
 
         this.#uiRoundLoc.x *= this.#canvas.width;
         this.#uiRoundLoc.y *= this.#canvas.height;
+
         this.#uiRoundAfterLoc.x *= this.#canvas.width;
         this.StartRound();
 
         FighterEngine.uiSheet.onload = () => {
-            console.log("b");
             this.#redFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "r");
             this.#greenFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "g");
         }
-        console.log("a");
-        console.log(FighterEngine.redFontSheet, FighterEngine.uiSheet);
     }
 
     Tick(deltaTime) {
@@ -132,6 +148,26 @@ export class FighterEngine {
             if (this.#uiFightTimer <= FighterEngine.defaultUiFightTimer / 3 && !this.#uiFightDone) {
                 this.#uiFightDone = true;
                 this.#gameState = "FIGHTING";
+            }
+        } else if (this.#uiWinnerTimer > 0) {
+            this.#uiWinnerTimer -= deltaTime;
+        }
+
+        if (this.#fadeDirection !== 0) {
+            this.#fadeTimer += deltaTime;
+
+            const dir = this.#fadeDirection;
+
+            let t = this.#fadeTimer / this.#fadeDuration;
+            if (t >= 1) {
+                t = 1;
+                this.#fadeDirection = 0;
+            }
+
+            if (dir === 1) {
+                this.#fadeAlpha = t;
+            } else if (dir === -1) {
+                this.#fadeAlpha = 1 - t;
             }
         }
     }
@@ -204,6 +240,27 @@ export class FighterEngine {
             }
 
             this.DrawPixelText(this.#ctx, "Fight!", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
+        } else if (this.#uiWinnerTimer > 0) {
+            const t = FighterEngine.defaultUiWinnerTimer - this.#uiWinnerTimer;
+            const stopGrowing = FighterEngine.defaultUiWinnerTimer / 6;
+            let fontSize = 0;
+
+            if (t <= stopGrowing) {
+                const percent = t / stopGrowing;
+                fontSize = FighterEngine.uiRoundSize * percent;
+            } else {
+                fontSize = FighterEngine.uiRoundSize;
+            }
+
+            this.DrawPixelText(this.#ctx, this.#uiWinnerText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiWinnerFillColor, FighterEngine.uiWinnerOutlineColor);
+        }
+
+        if (this.#fadeAlpha > 0) {
+            this.#ctx.save();
+            this.#ctx.globalAlpha = this.#fadeAlpha;
+            this.#ctx.fillStyle = this.#fadeColor;
+            this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+            this.#ctx.restore();
         }
 
         this.#ctx.restore();
@@ -218,13 +275,14 @@ export class FighterEngine {
     }
 
     StartRound() {
-        if (this.#rounds == FighterEngine.maxRounds) {
-            // Game Over
+        if (this.#rounds == FighterEngine.maxRounds || this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) {
+            console.log("Game Over");
+            return this.GameOver();
         }
 
         this.#gameState = "PRE_ROUND";
 
-        this.#fighter0.Reset(); 
+        this.#fighter0.Reset();
         this.#fighter1.Reset();
 
         this.#uiRoundTimer = FighterEngine.defaultUiRoundTimer;
@@ -233,15 +291,35 @@ export class FighterEngine {
         this.#rounds++;
     }
 
-    RoundOver() {
-        this.#gameState = "POS_ROUND";
+    async RoundOver(loser) {
+        if (!loser || (loser != this.#fighter0 && loser != this.#fighter1)) return;
 
+        const winner = loser == this.#fighter0 ? this.#fighter1 : this.#fighter0;
+
+        this.#ctrl0.Reset();
+        this.#ctrl1.Reset();
+
+        this.#gameState = "POS_ROUND";
         this.#uiRoundText = ``;
+
+        this.#uiWinnerTimer = FighterEngine.defaultUiWinnerTimer;
+        this.#uiWinnerText = `${loser == this.#fighter0 ? "P2" : "P1"} Wins!`;
+
+        winner.Celebrate();
+
+        if (loser == this.fighter0) this.#scoreF1++;
+        else if (loser == this.fighter1) this.#scoreF0++;
+
+        await FighterEngine.wait(800);
+        this.FadeTo("#000", 500);
+        await FighterEngine.wait(1200);
+        this.StartRound();
+
+        this.FadeFrom("#000", 500);
     }
 
     GameOver() {
         this.#gameState = "GAME_OVER";
-        return;
     }
 
 
@@ -254,7 +332,7 @@ export class FighterEngine {
         const spacing = 0;
         const spaceWidth = (outSize.w / 3) | 0;
 
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!? ";
+        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?"]
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {
@@ -272,23 +350,22 @@ export class FighterEngine {
         for (let i = 0; i < text.length; i++) {
             if (i != 0) currentX += spacing;
             const char = text[i].toUpperCase();
-            const index = alphabet.indexOf(char);
-
-            if (index === -1) continue;
 
             if (char === " ") {
                 currentX += spaceWidth;
                 continue;
             }
 
-            let sX, sY;
-            if (index < 26) {
-                sX = index * srcSize.w;
-                sY = 0;
-            } else {
-                sX = (index - 26) * srcSize.w;
-                sY = srcSize.h;
-            }
+            let index = -1;
+            let row = -1;
+            do {
+                row++;
+                index = rows[row].indexOf(char);
+            } while (index === -1 && row != rows.length - 1);
+
+            if (index === -1) continue;
+
+            let s = { x: index * srcSize.w, y: row * srcSize.h };
 
             const drawLayer = (sheet, color) => {
                 FighterEngine.tCtx.clearRect(0, 0, outSize.w, outSize.h);
@@ -296,7 +373,7 @@ export class FighterEngine {
 
                 FighterEngine.tCtx.drawImage(
                     sheet,
-                    sX, sY, srcSize.w, srcSize.h,
+                    s.x, s.y, srcSize.w, srcSize.h,
                     0, 0,
                     outSize.w, outSize.h
                 );
@@ -314,6 +391,23 @@ export class FighterEngine {
             currentX += outSize.w;
         }
     }
+
+    FadeTo(color = "#000", duration = 500) {
+        this.#fadeColor = color;
+        this.#fadeDuration = duration / 1000;
+        this.#fadeTimer = 0;
+        this.#fadeDirection = 1;
+        this.#fadeAlpha = 0;
+    }
+
+    FadeFrom(color = "#000", duration = 500) {
+        this.#fadeColor = color;
+        this.#fadeDuration = duration / 1000;
+        this.#fadeTimer = 0;
+        this.#fadeDirection = -1;
+        this.#fadeAlpha = 1;
+    }
+
 
     static extractChannelMask(image, channel = "r") {
         const canvas = document.createElement("canvas");
@@ -350,4 +444,6 @@ export class FighterEngine {
 
         return canvas;
     }
+
+    static wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 }

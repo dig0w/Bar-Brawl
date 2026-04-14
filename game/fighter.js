@@ -43,6 +43,8 @@ export class Fighter {
     #blockAnimState = -1;
     #blockAnimTimer = Fighter.defaultBlockAnimTimer;
 
+    #celebrating = false;
+
     static hitboxesOffset = [
         { x: 15, y: 12 },
         { x: 10, y: 18 },
@@ -70,7 +72,6 @@ export class Fighter {
     static healthBarStartPos = { x: 0, y: 16 };
     static healthBarLoc = { x: 3, y: 5 };
 
-    #roundsWon = 0;
     static winsBarSize = { w: 11, h: 2 };
     static winsBarStartPos = { x: 0, y: 21 };
     static winsBarLoc = { x: 5, y: 10 };
@@ -138,7 +139,8 @@ export class Fighter {
         }
 
         // Gravity
-        this.#vel.y += this.#engine.gravity * deltaTime;
+        if (this.#celebrating) this.#vel.y += this.#engine.gravity * deltaTime * .01;
+        else this.#vel.y += this.#engine.gravity * deltaTime;
 
         // Friction
         const friction = Math.pow(this.#engine.friction, deltaTime * 60);
@@ -287,20 +289,20 @@ export class Fighter {
                     frameCoords = { x: this.#size.w * 5, y: 0 };
                     break;
             }
-        } else {
-            // Body Animation
-            if ((this.#vel.x | 0) != 0 && this.isGrounded) {
-                switch (this.#bodyAnimState) {
-                    case 0:
-                        frameCoords = { x: this.#size.w, y: 0 };
-                        break;
-                    case 1:
-                        frameCoords = { x: 0, y: 0 };
-                        break;
-                    case 2:
-                        frameCoords = { x: this.#size.w * 2, y: 0 };
-                        break;
-                }
+        // Body Animation
+        } else if (this.#celebrating) {
+            frameCoords = { x: this.#size.w * 6, y: 0 };
+        } else if ((this.#vel.x | 0) != 0 && this.isGrounded) {
+            switch (this.#bodyAnimState) {
+                case 0:
+                    frameCoords = { x: this.#size.w, y: 0 };
+                    break;
+                case 1:
+                    frameCoords = { x: 0, y: 0 };
+                    break;
+                case 2:
+                    frameCoords = { x: this.#size.w * 2, y: 0 };
+                    break;
             }
         }
 
@@ -327,9 +329,6 @@ export class Fighter {
             ctx.translate(-(locX + Fighter.healthBarSize.w / 2), 0);
         }
 
-        const scale = 2;
-        const slope = Fighter.healthBarSize.h | 0;
-
         // Empty Bar
         ctx.drawImage(FighterEngine.uiSheet, (Fighter.healthBarStartPos.x | 0), (Fighter.healthBarStartPos.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0),
                     (locX | 0), (Fighter.healthBarLoc.y | 0), (Fighter.healthBarSize.w | 0), (Fighter.healthBarSize.h | 0));
@@ -339,10 +338,7 @@ export class Fighter {
         ctx.save();
         ctx.beginPath();
         for (let y = 0; y < Fighter.healthBarSize.h; y++) {
-            const offset = y;
-            const width = ghostWidth - offset;
-
-            ctx.rect(locX | 0, (Fighter.healthBarLoc.y + y) | 0, width | 0, 1);
+            ctx.rect(locX | 0, (Fighter.healthBarLoc.y + y) | 0, ghostWidth - y | 0, 1);
         }
         ctx.closePath();
         ctx.clip();
@@ -356,10 +352,7 @@ export class Fighter {
         ctx.save();
         ctx.beginPath();
         for (let y = 0; y < Fighter.healthBarSize.h; y++) {
-            const offset = y;
-            const width = fillWidth - offset;
-
-            ctx.rect(locX | 0, (Fighter.healthBarLoc.y + y) | 0, width | 0, 1);
+            ctx.rect(locX | 0, (Fighter.healthBarLoc.y + y) | 0, fillWidth - y | 0, 1);
         }
         ctx.closePath();
         ctx.clip();
@@ -369,7 +362,7 @@ export class Fighter {
         ctx.restore();
 
         // Wins Bar
-        const winPercent = this.#roundsWon / (FighterEngine.maxRounds - 1);
+        const winPercent = this.#engine.getScore(this) / (FighterEngine.maxRounds - 1);
         const locXw = (isVariantZero ? Fighter.winsBarLoc.x : this.#engine.canvasSize.w - Fighter.healthBarSize.w - 1);
 
         // Empty Bar
@@ -456,7 +449,26 @@ export class Fighter {
     }
 
     Die() {
+        this.#engine.RoundOver(this);
 
+        this.#punchAnimState = -1;
+        this.#blockAnimState = -1;
+        this.#vel.x = 0;
+        this.#vel.y = 0;
+    }
+
+    async Celebrate() {
+        this.#punchAnimState = -1;
+        this.#blockAnimState = -1;
+        this.#vel.x = 0;
+        this.#vel.y = 0;
+
+        await FighterEngine.wait(50);
+
+        this.#vel.y -= this.#jumpForce * .7;
+
+        await FighterEngine.wait(145);
+        this.#celebrating = true;
     }
 
     Reset() {
@@ -469,6 +481,13 @@ export class Fighter {
         this.#vel.y = 0;
 
         this.#facingRight = this.#variant == 0;
+
+        this.#health = Fighter.maxHealth;
+        this.#ghostHealth = this.#health;
+
+        this.#punchAnimState = -1;
+        this.#blockAnimState = -1;
+        this.#celebrating = false;
     }
 
 
