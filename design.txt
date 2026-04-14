@@ -51,8 +51,43 @@ During these stages the fighter can not throw a Jab.
 By combining a Block with Crouch, defends a low punch.
 
 To do:
-    Punch damage should consider the velocity in oponnents direction
-    Jump animations
-    Punched animations
-    Idle Fightig Stance animations
-    Game over Screen
+    [ ] Bar Scene
+        [x] Bar at round 1
+        [ ] Bar at round 2
+        [ ] Bar at round 3
+    [ ] Bald Character
+        [x] Idling
+        [x] Walking
+        [x] Jumping
+        [x] Punching
+        [x] Blocking
+        [ ] Punched
+    [ ] Biker Character
+        [ ] Idling
+        [ ] Walking
+        [ ] Jumping
+        [x] Punching
+        [x] Blocking
+        [ ] Punched
+    [ ] Gameplay
+        [x] Movement
+        [x] Jump
+        [ ] Crouch
+        [x] Punch
+        [x] Block
+        [ ] Kick?
+        [ ] Hit
+            [ ] Hit damage based on velocity
+        [x] Rounds
+    [ ] UI
+        [x] Health Bar
+        [x] Rounds won count
+        [x] Round count
+        [x] Fight! text
+        [x] Winner text
+        [ ] Game over
+        [ ] Main menu
+    [ ] Gamemodes
+        [x] Local PvP
+        [ ] Local AI
+        [ ] Online (peer-to-peer)
