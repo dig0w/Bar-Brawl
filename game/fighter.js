@@ -18,12 +18,16 @@ export class Fighter {
     static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_sheet.png" });
     static bodyImg1 = Object.assign(new Image(), { src: "assets/biker_sheet.png" });
     #bodyImg = null;
-    static defaultBodyAnimTimer = 10 / 60;
-    static maxBodyAnimState = 3;
+    static defaultBodyAnimTimer = 20 / 60;
+    static maxBodyAnimState = 2;
     #bodyAnimState = 0;
     #bodyAnimTimer = Fighter.defaultBodyAnimTimer;
 
     moveInput = 0;
+    static defaultWalkingAnimTimer = 8 / 60;
+    static maxWalkingAnimState = 3;
+    #walkingAnimState = 0;
+    #walkingAnimTimer = Fighter.defaultWalkingAnimTimer;
 
     static defaultPunchAnimTimer = 6 / 60;
     static maxPunchAnimState = 3;
@@ -180,11 +184,18 @@ export class Fighter {
         this.#UpdateHitboxes();
 
         // Body Animation
-        const moveIntensity = Math.abs(this.#vel.x) / moveSpeed;
-        this.#bodyAnimTimer -= deltaTime * (1.0 + (moveIntensity * 1.0));
+        this.#bodyAnimTimer -= deltaTime
         if (this.#bodyAnimTimer <= 0) {
-            this.#bodyAnimState = (this.#bodyAnimState + 1) % Fighter.maxBodyAnimState;
+            this.#bodyAnimState = (this.#bodyAnimState == Fighter.maxBodyAnimState - 1 && Math.random() > .9) ? 2 : (this.#bodyAnimState + 1) % Fighter.maxBodyAnimState;
             this.#bodyAnimTimer += Fighter.defaultBodyAnimTimer;
+        }
+
+        // Walking Animation
+        const moveIntensity = Math.abs(this.#vel.x) / moveSpeed;
+        this.#walkingAnimTimer -= deltaTime * (1.0 + (moveIntensity * 1.0));
+        if (this.#walkingAnimTimer <= 0) {
+            this.#walkingAnimState = (this.#walkingAnimState + 1) % Fighter.maxWalkingAnimState;
+            this.#walkingAnimTimer += Fighter.defaultWalkingAnimTimer;
         }
 
         // Punch Animation
@@ -267,38 +278,79 @@ export class Fighter {
         }
 
         let frameCoords = { x: 0, y: 0 };
-        if (this.#punchAnimState >= 0) {
+        if (this.#punchAnimState >= 0 && this.isGrounded) {
             // Punch Animation
             switch (this.#punchAnimState) {
                 case 0:
                 case 2:
-                    frameCoords = { x: this.#size.w * 3, y: 0 };
+                    frameCoords = { x: 0, y: 0 };
                     break;
                 case 1:
-                    frameCoords = { x: this.#size.w * 4, y: 0 };
+                    frameCoords = { x: 0, y: this.#size.h * 2 };
                     break;
             }
-        } else if (this.#blockAnimState >= 0) {
+        } else if (this.#blockAnimState >= 0 && this.isGrounded) {
             // Block Animation
             switch (this.#blockAnimState) {
                 case 0:
                 case 2:
-                    frameCoords = { x: this.#size.w * 3, y: 0 };
+                    frameCoords = { x: 0, y: 0 };
                     break;
                 case 1:
-                    frameCoords = { x: this.#size.w * 5, y: 0 };
+                    frameCoords = { x: this.#size.w, y: this.#size.h * 2 };
                     break;
             }
-        // Body Animation
         } else if (this.#celebrating) {
+            // Celebatrion Animation
             frameCoords = { x: this.#size.w * 6, y: 0 };
-        } else if ((this.#vel.x | 0) != 0 && this.isGrounded) {
-            switch (this.#bodyAnimState) {
+        } else if (!this.isGrounded) {
+            // Jump Animation
+            if (this.#punchAnimState >= 0) {
+                // Punch Animation
+                switch (this.#punchAnimState) {
+                    case 0:
+                    case 2:
+                        frameCoords = { x: 0, y: this.#size.h * 3 };
+                        break;
+                    case 1:
+                        frameCoords = { x: this.#size.w, y: this.#size.h * 3 };
+                        break;
+                }
+            } else if (this.#blockAnimState >= 0) {
+                // Block Animation
+                switch (this.#blockAnimState) {
+                    case 0:
+                    case 2:
+                        frameCoords = { x: 0, y: this.#size.h * 3 };
+                        break;
+                    case 1:
+                        frameCoords = { x: this.#size.w * 2, y: this.#size.h * 3 };
+                        break;
+                }
+            } else {
+                frameCoords = { x: 0, y: this.#size.h * 3 };
+            }
+        } else if ((this.#vel.x | 0) != 0) {
+            // Walking Animation
+            switch (this.#walkingAnimState) {
                 case 0:
-                    frameCoords = { x: this.#size.w, y: 0 };
+                    frameCoords = { x: 0, y: this.#size.h };
                     break;
                 case 1:
+                    frameCoords = { x: this.#size.w, y: this.#size.h };
+                    break;
+                case 2:
+                        frameCoords = { x: this.#size.w * 2, y: this.#size.h };
+                    break;
+            }
+        } else {
+            // Body Animation
+            switch (this.#bodyAnimState) {
+                case 0:
                     frameCoords = { x: 0, y: 0 };
+                    break;
+                case 1:
+                    frameCoords = { x: this.#size.w, y: 0 };
                     break;
                 case 2:
                     frameCoords = { x: this.#size.w * 2, y: 0 };
@@ -389,7 +441,7 @@ export class Fighter {
     }
 
     Punch() {
-        if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.isGrounded && this.#punchCooldown <= 0) {
+        if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.#punchCooldown <= 0) {
             this.#punchAnimState = 0;
             this.#punchAnimTimer = Fighter.defaultPunchAnimTimer;
             this.#vel.x += this.moveInput * 60;
@@ -402,7 +454,7 @@ export class Fighter {
     SetBlocking(isHeld) {
         this.#isBlockHeld = isHeld;
 
-        if (this.#isBlockHeld && this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.isGrounded) {
+        if (this.#isBlockHeld && this.#punchAnimState < 0 && this.#blockAnimState < 0) {
             this.#blockAnimState = 0;
             this.#blockAnimTimer = Fighter.defaultBlockAnimTimer;
             this.#vel.x = 0;

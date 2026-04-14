@@ -61,6 +61,7 @@ To do:
         [x] Jumping
         [x] Punching
         [x] Blocking
+        [x] Celebrate
         [ ] Punched
     [ ] Biker Character
         [ ] Idling
@@ -68,6 +69,7 @@ To do:
         [ ] Jumping
         [x] Punching
         [x] Blocking
+        [x] Celebrate
         [ ] Punched
     [ ] Gameplay
         [x] Movement
