@@ -302,7 +302,7 @@ export class Fighter {
             }
         } else if (this.#celebrating) {
             // Celebatrion Animation
-            frameCoords = { x: this.#size.w * 6, y: 0 };
+            frameCoords = { x: this.#size.w * 2, y: this.#size.h * 2 };
         } else if (!this.isGrounded) {
             // Jump Animation
             if (this.#punchAnimState >= 0) {
