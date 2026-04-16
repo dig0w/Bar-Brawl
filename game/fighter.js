@@ -32,22 +32,32 @@ export class Fighter {
     static defaultPunchAnimTimer = 6 / 60;
     static maxPunchAnimState = 3;
     #punchAnimState = -1;
-    #punchAnimTimer = Fighter.defaultPunchAnimTimer;
+    #punchAnimTimer = 0;
 
     #punchHasHit = false;
     #punchTimer = 0;
     #startPunchTrace = Fighter.defaultPunchAnimTimer / 2;
     #endPunchTrace = Fighter.defaultPunchAnimTimer + (Fighter.defaultPunchAnimTimer / 2);
-    static defaultPunchCooldown = 12 / 60;
-    #punchCooldown = Fighter.defaultPunchCooldown;
+    static defaultPunchCooldown = 18 / 60;
+    #punchCooldown = 0;
 
     #isBlockHeld = false;
     static defaultBlockAnimTimer = 6 / 60;
     static maxBlockAnimState = 3;
     #blockAnimState = -1;
-    #blockAnimTimer = Fighter.defaultBlockAnimTimer;
+    #blockAnimTimer = 0;
 
     #celebrating = false;
+
+    static defaultPunchedAnimTimer = 14 / 60;
+    #punchedAnimTimer = 0;
+    static defaultPunchedCooldown = 12 / 60;
+    #punchedCooldown = 0;
+
+    static defaultDieAnimTimer = 14 / 60;
+    static maxDieAnimState = 3;
+    #dieAnimState = 0;
+    #dieAnimTimer = 0;
 
     static hitboxesOffset = [
         { x: 15, y: 12 },
@@ -71,7 +81,7 @@ export class Fighter {
     #health = Fighter.maxHealth;
     static defaultGhostTimer = 4 / 60;
     #ghostHealth = 100;
-    #ghostTimer = Fighter.defaultGhostTimer;
+    #ghostTimer = 0;
     static healthBarSize = { w: 41, h: 5 };
     static healthBarStartPos = { x: 0, y: 16 };
     static healthBarLoc = { x: 3, y: 5 };
@@ -259,6 +269,19 @@ export class Fighter {
             }
         }
 
+        // Punched Animation
+        if (this.#punchedAnimTimer >= 0) this.#punchedAnimTimer -= deltaTime
+        if (this.#punchedCooldown >= 0) this.#punchedCooldown -= deltaTime;
+
+        // Die Animation
+        if (this.#dieAnimTimer >= 0 && this.#health <= 0) {
+            this.#dieAnimTimer -= deltaTime
+            if (this.#dieAnimTimer <= 0 && this.#dieAnimState != Fighter.maxDieAnimState - 1) {
+                this.#dieAnimState = (this.#dieAnimState + 1) % Fighter.maxDieAnimState;
+                this.#dieAnimTimer += Fighter.defaultDieAnimTimer;
+            }
+        }
+
         // Health Bar Animation
         if (this.#ghostTimer > 0) {
             this.#ghostTimer -= deltaTime;
@@ -278,7 +301,23 @@ export class Fighter {
         }
 
         let frameCoords = { x: 0, y: 0 };
-        if (this.#punchAnimState >= 0 && this.isGrounded) {
+        if (this.#health <= 0) {
+            // Die Animations
+            switch (this.#dieAnimState) {
+                case 0:
+                    frameCoords = { x: 0, y: this.#size.h * 4 };
+                    break;
+                case 1:
+                    frameCoords = { x: this.#size.w, y: this.#size.h * 4 };
+                    break;
+                case 2:
+                    frameCoords = { x: this.#size.w * 2, y: this.#size.h * 4 };
+                    break;
+            }
+        } else if (this.#punchedAnimTimer > 0) {
+            // Punched Animation
+            frameCoords = { x: 0, y: this.#size.h * 4 };
+        } else if (this.#punchAnimState > 0 && this.isGrounded) {
             // Punch Animation
             switch (this.#punchAnimState) {
                 case 0:
@@ -289,7 +328,7 @@ export class Fighter {
                     frameCoords = { x: 0, y: this.#size.h * 2 };
                     break;
             }
-        } else if (this.#blockAnimState >= 0 && this.isGrounded) {
+        } else if (this.#blockAnimState > 0 && this.isGrounded) {
             // Block Animation
             switch (this.#blockAnimState) {
                 case 0:
@@ -305,7 +344,7 @@ export class Fighter {
             frameCoords = { x: this.#size.w * 2, y: this.#size.h * 2 };
         } else if (!this.isGrounded) {
             // Jump Animation
-            if (this.#punchAnimState >= 0) {
+            if (this.#punchAnimState > 0) {
                 // Punch Animation
                 switch (this.#punchAnimState) {
                     case 0:
@@ -316,7 +355,7 @@ export class Fighter {
                         frameCoords = { x: this.#size.w, y: this.#size.h * 3 };
                         break;
                 }
-            } else if (this.#blockAnimState >= 0) {
+            } else if (this.#blockAnimState > 0) {
                 // Block Animation
                 switch (this.#blockAnimState) {
                     case 0:
@@ -441,7 +480,7 @@ export class Fighter {
     }
 
     Punch() {
-        if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.#punchCooldown <= 0) {
+        if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.#punchCooldown <= 0 && this.#punchedCooldown <= 0) {
             this.#punchAnimState = 0;
             this.#punchAnimTimer = Fighter.defaultPunchAnimTimer;
             this.#vel.x += this.moveInput * 60;
@@ -454,7 +493,7 @@ export class Fighter {
     SetBlocking(isHeld) {
         this.#isBlockHeld = isHeld;
 
-        if (this.#isBlockHeld && this.#punchAnimState < 0 && this.#blockAnimState < 0) {
+        if (this.#isBlockHeld && this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.#punchedCooldown <= 0) {
             this.#blockAnimState = 0;
             this.#blockAnimTimer = Fighter.defaultBlockAnimTimer;
             this.#vel.x = 0;
@@ -493,6 +532,8 @@ export class Fighter {
         this.#vel.x += this.#facingRight ? -knockback : knockback;
 
         this.#ghostTimer = Fighter.defaultGhostTimer;
+        this.#punchedAnimTimer = Fighter.defaultPunchedAnimTimer;
+        this.#punchedCooldown = Fighter.defaultPunchedCooldown;
 
         if (this.#health <= 0) {
             this.#health = 0;
@@ -505,8 +546,9 @@ export class Fighter {
 
         this.#punchAnimState = -1;
         this.#blockAnimState = -1;
-        this.#vel.x = 0;
-        this.#vel.y = 0;
+
+        this.#dieAnimTimer = Fighter.defaultDieAnimTimer;
+        this.#dieAnimState = 0;
     }
 
     async Celebrate() {

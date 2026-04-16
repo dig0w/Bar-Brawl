@@ -55,14 +55,14 @@ To do:
         [x] Bar at round 1
         [ ] Bar at round 2
         [ ] Bar at round 3
-    [ ] Bald Character
+    [x] Bald Character
         [x] Idling
         [x] Walking
         [x] Jumping
         [x] Punching
         [x] Blocking
         [x] Celebrate
-        [ ] Punched
+        [x] Punched
     [ ] Biker Character
         [ ] Idling
         [ ] Walking
@@ -73,7 +73,8 @@ To do:
         [ ] Punched
     [ ] Gameplay
         [x] Movement
-        [x] Jump
+        [ ] Jump
+            [ ] Should float at peak a bit, and fall faster after
         [ ] Crouch
         [x] Punch
         [x] Block
