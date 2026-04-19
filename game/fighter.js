@@ -90,7 +90,7 @@ export class Fighter {
     static winsBarStartPos = { x: 0, y: 21 };
     static winsBarLoc = { x: 5, y: 10 };
 
-    #iconStartPos = { x: this.#size.w * 3 + 5, y: 5 };
+    #iconStartPos = { x: 5, y: 5 };
     static iconStartSize = { w: 21, h: 21 };
     static iconSize = { w: 9, h: 9 };
 
