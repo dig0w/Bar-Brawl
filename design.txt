@@ -51,6 +51,15 @@ During these stages the fighter can not throw a Jab.
 By combining a Block with Crouch, defends a low punch.
 
 To do:
+    [ ] Cinematic Intro
+        [ ] Bottle on counter
+        [ ] Start grabbing the bottle
+        [ ] Grab bottle
+        [ ] Zoom out
+        [ ] Hold
+        [ ] Start throwing bottle
+        [ ] Bottle thrown and broken
+        [ ] Fade to black
     [ ] Bar Scene
         [x] Bar at round 1
         [ ] Bar at round 2

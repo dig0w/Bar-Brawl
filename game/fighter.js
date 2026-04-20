@@ -111,6 +111,8 @@ export class Fighter {
                 break;
             case 1:
                 this.#bodyImg = Fighter.bodyImg1;
+                this.#bodyAnimState++;
+
                 this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
 
                 this.#facingRight = false;

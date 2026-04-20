@@ -47,8 +47,8 @@ export class FighterEngine {
     static defaultUiFightTimer = .75;
     #uiFightTimer = 0;
     #uiFightDone = false;
-    static uiFightFillColor = "#ddb918";
-    static uiFightOutlineColor = "#df2817";
+    static uiFightFillColor = "#e66257";
+    static uiFightOutlineColor = "#331505";
 
     #uiWinnerText = "";
     static defaultUiWinnerTimer = 1.5;
