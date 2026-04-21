@@ -90,6 +90,7 @@ To do:
         [ ] Kick?
         [ ] Hit
             [ ] Hit damage based on velocity
+            [ ] On Hit slow down time a bit
         [x] Rounds
     [ ] UI
         [x] Health Bar
