@@ -82,17 +82,17 @@ To do:
         [x] Punched
     [ ] Gameplay
         [x] Movement
-        [ ] Jump
-            [ ] Should float at peak a bit, and fall faster after
-        [ ] Crouch
+        [x] Jump
+            [x] Should float at peak a bit, and fall faster after
         [x] Punch
         [x] Block
-        [ ] Kick?
         [ ] Hit
-            [ ] Hit damage based on velocity
+            [x] Hit damage based on velocity
             [ ] On Hit slow down time a bit
             [x] On Hit spawn blood sprite
         [x] Rounds
+        [ ] Crouch?
+        [ ] Kick?
     [ ] UI
         [x] Health Bar
         [x] Rounds won count

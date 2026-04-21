@@ -163,8 +163,17 @@ export class Fighter {
         }
 
         // Gravity
-        if (this.#celebrating) this.#vel.y += this.#engine.gravity * deltaTime * .01;
-        else this.#vel.y += this.#engine.gravity * deltaTime;
+        let gravityMultiplier = 1.0;
+        if (!this.isGrounded) {
+            if (Math.abs(this.#vel.y) < 50) { 
+                gravityMultiplier = 0.7;
+            } else if (this.#vel.y > 0) {
+                gravityMultiplier = 1.8;
+            }
+        }
+
+        if (this.#celebrating) this.#vel.y += this.#engine.gravity * deltaTime * 0.01;
+        else this.#vel.y += (this.#engine.gravity * gravityMultiplier) * deltaTime;
 
         // Friction
         const friction = Math.pow(this.#engine.friction, deltaTime * 60);
@@ -253,7 +262,7 @@ export class Fighter {
                         if (intersected) {
                             this.#punchHasHit = true;
 
-                            opponent.TakeDamage(hitbox, hitPoint);
+                            opponent.TakeDamage(hitbox, hitPoint, this.#vel.x);
                             break;
                         }
                     }
@@ -555,13 +564,15 @@ export class Fighter {
         }
     }
 
-    TakeDamage(hitbox, hitPoint) {
+    TakeDamage(hitbox, hitPoint, hitSpeed) {
         const i = this.#hitboxes.indexOf(hitbox);
             if (i < 0) return;
+        
+        const diffSpeed = (hitSpeed - this.#vel.x) * (this.#facingRight ? -1 : 1);
+        const diffSpeedRatio = 1 + (diffSpeed / 125) / 2;
+        const damage = Fighter.hitboxesDamage[i] * diffSpeedRatio;
 
-        const damage = Fighter.hitboxesDamage[i];
-
-        let knockback = 300;
+        let knockback = 500 * (damage / 30);
 
         if (this.#blockAnimState == 1) {
             damage *= 0.2;
