@@ -43,19 +43,45 @@ export function Intersects(obj1, obj2) {
 }
 
 function IntersectsCircleCircle(c1, c2) {
-    const dx = c1.loc.x - c2.loc.x;
-    const dy = c1.loc.y - c2.loc.y;
+    const dx = c2.loc.x - c1.loc.x;
+    const dy = c2.loc.y - c1.loc.y;
     const distanceSquared = dx * dx + dy * dy;
     const radiusSum = c1.radius + c2.radius;
 
-    return distanceSquared < (radiusSum * radiusSum);
+    const intersected = distanceSquared < (radiusSum * radiusSum);
+
+    let hitPoint = null;
+    if (intersected) {
+        const distance = Math.sqrt(distanceSquared);
+        hitPoint = {
+            x: c1.loc.x + (dx / distance) * c1.radius,
+            y: c1.loc.y + (dy / distance) * c1.radius
+        };
+    }
+
+    return { intersected, hitPoint };
 }
 
 function IntersectsRectRect(r1, r2) {
-    return r1.loc.x < r2.loc.x + r2.size.w &&
-           r1.loc.x + r1.size.w > r2.loc.x &&
-           r1.loc.y < r2.loc.y + r2.size.h &&
-           r1.loc.y + r1.size.h > r2.loc.y;
+    const intersected = r1.loc.x < r2.loc.x + r2.size.w &&
+                        r1.loc.x + r1.size.w > r2.loc.x &&
+                        r1.loc.y < r2.loc.y + r2.size.h &&
+                        r1.loc.y + r1.size.h > r2.loc.y;
+
+    let hitPoint = null;
+    if (intersected) {
+        const xStart = Math.max(r1.loc.x, r2.loc.x);
+        const xEnd = Math.min(r1.loc.x + r1.size.w, r2.loc.x + r2.size.w);
+        const yStart = Math.max(r1.loc.y, r2.loc.y);
+        const yEnd = Math.min(r1.loc.y + r1.size.h, r2.loc.y + r2.size.h);
+
+        hitPoint = {
+            x: (xStart + xEnd) / 2,
+            y: (yStart + yEnd) / 2
+        };
+    }
+
+    return { intersected, hitPoint };
 }
 
 function IntersectsRectCircle(rect, circle) {
@@ -64,7 +90,8 @@ function IntersectsRectCircle(rect, circle) {
 
     const dx = circle.loc.x - closestX;
     const dy = circle.loc.y - closestY;
-
     const distanceSquared = dx * dx + dy * dy;
-    return distanceSquared < (circle.radius * circle.radius);
+    const intersected = distanceSquared < (circle.radius * circle.radius);
+
+    return { intersected, hitPoint: intersected ? { x: closestX, y: closestY } : null };
 }

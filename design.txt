@@ -72,14 +72,14 @@ To do:
         [x] Blocking
         [x] Celebrate
         [x] Punched
-    [ ] Biker Character
-        [ ] Idling
-        [ ] Walking
-        [ ] Jumping
+    [x] Biker Character
+        [x] Idling
+        [x] Walking
+        [x] Jumping
         [x] Punching
         [x] Blocking
         [x] Celebrate
-        [ ] Punched
+        [x] Punched
     [ ] Gameplay
         [x] Movement
         [ ] Jump
@@ -91,6 +91,7 @@ To do:
         [ ] Hit
             [ ] Hit damage based on velocity
             [ ] On Hit slow down time a bit
+            [x] On Hit spawn blood sprite
         [x] Rounds
     [ ] UI
         [x] Health Bar

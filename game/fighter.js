@@ -59,6 +59,14 @@ export class Fighter {
     #dieAnimState = 0;
     #dieAnimTimer = 0;
 
+    static bloodImg = Object.assign(new Image(), { src: "assets/blood_sheet.png" });
+    static bloodSize = { w: 16, h: 16 };
+    static defaultBloodAnimTimer = 8 / 60;
+    static maxBloodAnimState = 3;
+    #bloodAnimTimer = 0;
+    #bloodAnimState = -1;
+    #bloodLoc = { x: 0, y: 0 };
+
     static hitboxesOffset = [
         { x: 15, y: 12 },
         { x: 10, y: 18 },
@@ -241,10 +249,11 @@ export class Fighter {
 
                     for (let i = 0; i < opponent.hitboxes.length; i++) {
                         const hitbox = opponent.hitboxes[i];
-                        if (Intersects(this.#fistHitBox, hitbox)) {
+                        const { intersected, hitPoint } = Intersects(this.#fistHitBox, hitbox);
+                        if (intersected) {
                             this.#punchHasHit = true;
 
-                            opponent.TakeDamage(Fighter.hitboxesDamage[i]);
+                            opponent.TakeDamage(hitbox, hitPoint);
                             break;
                         }
                     }
@@ -281,6 +290,15 @@ export class Fighter {
             if (this.#dieAnimTimer <= 0 && this.#dieAnimState != Fighter.maxDieAnimState - 1) {
                 this.#dieAnimState = (this.#dieAnimState + 1) % Fighter.maxDieAnimState;
                 this.#dieAnimTimer += Fighter.defaultDieAnimTimer;
+            }
+        }
+
+        // Blood Animation
+        if (this.#bloodAnimTimer >= 0 && this.#bloodAnimState >= 0) {
+            this.#bloodAnimTimer -= deltaTime
+            if (this.#bloodAnimTimer <= 0) {
+                this.#bloodAnimState = (this.#bloodAnimState == Fighter.maxBloodAnimState - 1) ? -1 : (this.#bloodAnimState + 1) % Fighter.maxBloodAnimState;
+                this.#bloodAnimTimer += Fighter.defaultBloodAnimTimer;
             }
         }
 
@@ -401,6 +419,24 @@ export class Fighter {
 
         ctx.drawImage(this.#bodyImg, (frameCoords.x | 0), (frameCoords.y | 0), (this.#size.w | 0), (this.#size.h | 0), (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
 
+
+        // Blood Animation
+        if (this.#bloodAnimState >= 0) {
+            switch (this.#bloodAnimState) {
+                case 0:
+                    frameCoords = { x: 0, y: 0 };
+                    break;
+                case 1:
+                    frameCoords = { x: Fighter.bloodSize.w, y: 0 };
+                    break;
+                case 2:
+                    frameCoords = { x: Fighter.bloodSize.w * 2, y: 0 };
+                    break;
+            }
+
+            ctx.drawImage(Fighter.bloodImg, (frameCoords.x | 0), (frameCoords.y | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0), (this.#bloodLoc.x - Fighter.bloodSize.w / 2 | 0), (this.#bloodLoc.y - Fighter.bloodSize.h / 2 | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0));
+        }
+
         ctx.restore();
 
         if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
@@ -519,7 +555,12 @@ export class Fighter {
         }
     }
 
-    TakeDamage(damage) {
+    TakeDamage(hitbox, hitPoint) {
+        const i = this.#hitboxes.indexOf(hitbox);
+            if (i < 0) return;
+
+        const damage = Fighter.hitboxesDamage[i];
+
         let knockback = 300;
 
         if (this.#blockAnimState == 1) {
@@ -536,6 +577,10 @@ export class Fighter {
         this.#ghostTimer = Fighter.defaultGhostTimer;
         this.#punchedAnimTimer = Fighter.defaultPunchedAnimTimer;
         this.#punchedCooldown = Fighter.defaultPunchedCooldown;
+        this.#bloodAnimTimer = Fighter.defaultBloodAnimTimer;
+        this.#bloodAnimState = 0;
+        this.#bloodLoc.x = hitPoint.x;
+        this.#bloodLoc.y = hitPoint.y;
 
         if (this.#health <= 0) {
             this.#health = 0;
