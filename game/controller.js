@@ -42,8 +42,8 @@ export class Controller {
                 inputs.MoveRight = this.#keys["KeyD"];
                 inputs.Jump = this.#keys["KeyW"];
                 inputs.Crouch = this.#keys["KeyS"];
-                inputs.Punch = this.#keys["KeyG"];
-                inputs.Block = this.#keys["KeyF"];
+                inputs.Punch = this.#keys["KeyR"];
+                inputs.Block = this.#keys["KeyT"];
                 break;
             case 1:
                 inputs.MoveLeft = this.#keys["ArrowLeft"];

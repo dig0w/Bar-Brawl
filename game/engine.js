@@ -6,6 +6,7 @@ export class FighterEngine {
     static friction = .98;
     #groundY = 2;
     #worldWidth = 0;
+    #timeScale = 1;
 
     #canvasSize = { w: 120, h: 80 };
     #canvas = null;
@@ -25,6 +26,8 @@ export class FighterEngine {
     #scoreF0 = 0;
     #scoreF1 = 0;
 
+
+    #timeScaleTimer = 0;
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
@@ -51,7 +54,7 @@ export class FighterEngine {
     static uiFightOutlineColor = "#331505";
 
     #uiWinnerText = "";
-    static defaultUiWinnerTimer = 1.5;
+    static defaultUiWinnerTimer = .55;
     #uiWinnerTimer = 0;
     static uiWinnerFillColor = "#feffff";
     static uiWinnerOutlineColor = "#545454";
@@ -119,6 +122,14 @@ export class FighterEngine {
     }
 
     Tick(deltaTime) {
+        if (this.#timeScaleTimer >= 0) {
+            this.#timeScaleTimer -= deltaTime;
+            if (this.#timeScaleTimer <= 0) {
+                this.#timeScale = 1;
+            }
+        }
+        deltaTime *= this.#timeScale;
+
         if (this.#gameState === "FIGHTING") {
             for (let i = this.#objects.length - 1; i >= 0; i--) {
                 this.#objects[i].Tick(deltaTime);
@@ -242,7 +253,7 @@ export class FighterEngine {
             this.DrawPixelText(this.#ctx, "Fight!", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
         } else if (this.#uiWinnerTimer > 0) {
             const t = FighterEngine.defaultUiWinnerTimer - this.#uiWinnerTimer;
-            const stopGrowing = FighterEngine.defaultUiWinnerTimer / 6;
+            const stopGrowing = FighterEngine.defaultUiWinnerTimer / 2;
             let fontSize = 0;
 
             if (t <= stopGrowing) {
@@ -302,6 +313,8 @@ export class FighterEngine {
         this.#gameState = "POS_ROUND";
         this.#uiRoundText = ``;
 
+        await FighterEngine.wait(50);
+
         this.#uiWinnerTimer = FighterEngine.defaultUiWinnerTimer;
         this.#uiWinnerText = `${loser == this.#fighter0 ? "P2" : "P1"} Wins!`;
 
@@ -310,16 +323,25 @@ export class FighterEngine {
         if (loser == this.fighter0) this.#scoreF1++;
         else if (loser == this.fighter1) this.#scoreF0++;
 
-        await FighterEngine.wait(800);
-        this.FadeTo("#000", 500);
+        await FighterEngine.wait(400);
+        this.#timeScale = 0.1;
+
+        await FighterEngine.wait(400);
+        this.FadeTo("#000", 500 * this.#timeScale);
         await FighterEngine.wait(1200);
         this.StartRound();
 
+        this.#timeScale = 1;
         this.FadeFrom("#000", 500);
     }
 
     GameOver() {
         this.#gameState = "GAME_OVER";
+    }
+
+    SlowTime(scale = 0.1, duration = 50) {
+        this.#timeScale = scale;
+        this.#timeScaleTimer = duration;
     }
 
 

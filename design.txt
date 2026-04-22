@@ -86,9 +86,9 @@ To do:
             [x] Should float at peak a bit, and fall faster after
         [x] Punch
         [x] Block
-        [ ] Hit
+        [x] Hit
             [x] Hit damage based on velocity
-            [ ] On Hit slow down time a bit
+            [x] On Hit slow down time a bit
             [x] On Hit spawn blood sprite
         [x] Rounds
         [ ] Crouch?
@@ -102,6 +102,6 @@ To do:
         [ ] Game over
         [ ] Main menu
     [ ] Gamemodes
-        [x] Local PvP
-        [ ] Local AI
-        [ ] Online (peer-to-peer)
+        [x] Local PvP               (Versus -> Local)
+        [ ] Local AI                (Start)
+        [ ] Online (peer-to-peer)   (Versus -> Online)

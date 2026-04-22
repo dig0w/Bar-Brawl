@@ -85,6 +85,7 @@ export class Fighter {
     #fistHitBox = null;
 
     static hitboxesDamage = [15, 10, 7, 7, 5, 5];
+    // static hitboxesDamage = [200, 200, 200, 200, 200, 200];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
     static defaultGhostTimer = 4 / 60;
@@ -172,8 +173,7 @@ export class Fighter {
             }
         }
 
-        if (this.#celebrating) this.#vel.y += this.#engine.gravity * deltaTime * 0.01;
-        else this.#vel.y += (this.#engine.gravity * gravityMultiplier) * deltaTime;
+        this.#vel.y += (this.#engine.gravity * gravityMultiplier) * deltaTime;
 
         // Friction
         const friction = Math.pow(this.#engine.friction, deltaTime * 60);
@@ -428,6 +428,7 @@ export class Fighter {
 
         ctx.drawImage(this.#bodyImg, (frameCoords.x | 0), (frameCoords.y | 0), (this.#size.w | 0), (this.#size.h | 0), (this.#loc.x | 0), (this.#loc.y | 0), (this.#size.w | 0), (this.#size.h | 0));
 
+        ctx.restore();
 
         // Blood Animation
         if (this.#bloodAnimState >= 0) {
@@ -445,8 +446,6 @@ export class Fighter {
 
             ctx.drawImage(Fighter.bloodImg, (frameCoords.x | 0), (frameCoords.y | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0), (this.#bloodLoc.x - Fighter.bloodSize.w / 2 | 0), (this.#bloodLoc.y - Fighter.bloodSize.h / 2 | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0));
         }
-
-        ctx.restore();
 
         if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
     }
@@ -570,7 +569,7 @@ export class Fighter {
         
         const diffSpeed = (hitSpeed - this.#vel.x) * (this.#facingRight ? -1 : 1);
         const diffSpeedRatio = 1 + (diffSpeed / 125) / 2;
-        const damage = Fighter.hitboxesDamage[i] * diffSpeedRatio;
+        let damage = Fighter.hitboxesDamage[i] * diffSpeedRatio;
 
         let knockback = 500 * (damage / 30);
 
@@ -597,6 +596,8 @@ export class Fighter {
             this.#health = 0;
             this.Die();
         }
+
+        this.#engine.SlowTime(0.1, .1);
     }
 
     Die() {
@@ -615,11 +616,11 @@ export class Fighter {
         this.#vel.x = 0;
         this.#vel.y = 0;
 
+        await FighterEngine.wait(250);
+
+        this.#vel.y -= this.#jumpForce;
+
         await FighterEngine.wait(50);
-
-        this.#vel.y -= this.#jumpForce * .7;
-
-        await FighterEngine.wait(145);
         this.#celebrating = true;
     }
 
