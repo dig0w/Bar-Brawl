@@ -99,7 +99,7 @@ To do:
         [x] Round count
         [x] Fight! text
         [x] Winner text
-        [ ] Game over
+        [x] Game over
         [ ] Main menu
     [ ] Gamemodes
         [x] Local PvP               (Versus -> Local)

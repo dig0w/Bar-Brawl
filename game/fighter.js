@@ -84,8 +84,8 @@ export class Fighter {
     #fistHitBoxOffsetEnd = null;
     #fistHitBox = null;
 
-    static hitboxesDamage = [15, 10, 7, 7, 5, 5];
-    // static hitboxesDamage = [200, 200, 200, 200, 200, 200];
+    // static hitboxesDamage = [15, 10, 7, 7, 5, 5];
+    static hitboxesDamage = [200, 200, 200, 200, 200, 200];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
     static defaultGhostTimer = 4 / 60;
@@ -451,6 +451,8 @@ export class Fighter {
     }
 
     DrawUI(ctx) {
+        if (this.#engine.gameState == "GAME_OVER") return;
+
         const isVariantZero = this.#variant == 0;
 
         // Health Bar
@@ -616,7 +618,7 @@ export class Fighter {
         this.#vel.x = 0;
         this.#vel.y = 0;
 
-        await FighterEngine.wait(250);
+        await FighterEngine.wait(150);
 
         this.#vel.y -= this.#jumpForce;
 

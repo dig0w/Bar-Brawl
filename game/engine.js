@@ -35,6 +35,9 @@ export class FighterEngine {
     static tCanvas = document.createElement("canvas");
     static tCtx = FighterEngine.tCanvas.getContext("2d");
 
+    static defaultUiGameOverTimer = .25;
+    #uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
+
     #uiRoundText = "";
     static defaultUiRoundTimer = .75;
     #uiRoundTimer = FighterEngine.defaultUiRoundTimer;
@@ -54,7 +57,7 @@ export class FighterEngine {
     static uiFightOutlineColor = "#331505";
 
     #uiWinnerText = "";
-    static defaultUiWinnerTimer = .55;
+    static defaultUiWinnerTimer = 1.3;
     #uiWinnerTimer = 0;
     static uiWinnerFillColor = "#feffff";
     static uiWinnerOutlineColor = "#545454";
@@ -68,6 +71,7 @@ export class FighterEngine {
     constructor() {
     }
 
+    get gameState() { return this.#gameState; } 
     get gravity() { return FighterEngine.gravity; }
     get friction() { return FighterEngine.friction; }
     get groundY() { return this.#groundY; }
@@ -128,19 +132,21 @@ export class FighterEngine {
                 this.#timeScale = 1;
             }
         }
-        deltaTime *= this.#timeScale;
+        const activeDeltaTime = deltaTime * this.#timeScale;
 
         if (this.#gameState === "FIGHTING") {
             for (let i = this.#objects.length - 1; i >= 0; i--) {
-                this.#objects[i].Tick(deltaTime);
+                this.#objects[i].Tick(activeDeltaTime);
             }
         } else {
             for (let i = this.#objects.length - 1; i >= 0; i--) {
-                if (!(this.#objects[i] instanceof Controller)) this.#objects[i].Tick(deltaTime);
+                if (!(this.#objects[i] instanceof Controller)) this.#objects[i].Tick(activeDeltaTime);
             }
         }
 
-        if (this.#uiRoundTimer > 0) {
+        if (this.#uiGameOverTimer > 0 && this.#gameState == "GAME_OVER") {
+            this.#uiGameOverTimer -= deltaTime;
+        } else if (this.#uiRoundTimer > 0) {
             this.#uiRoundTimer -= deltaTime;
 
             if (this.#uiRoundTimer <= 0) {
@@ -191,7 +197,14 @@ export class FighterEngine {
         this.#ctx.scale(2, 2);
 
         let scrollX = 0;
-        if (this.#backgroundImage && this.#backgroundImage.complete) {
+
+        if (this.#gameState == "GAME_OVER") {
+            this.#ctx.fillStyle = "#000000";
+            this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+
+            const fighterMidX = (this.#fighter0.loc.x + this.#fighter1.loc.x) / 2 + (this.#fighter0.size.w / 2);
+            scrollX = (this.#canvas.width / 4) - fighterMidX;
+        } else if (this.#backgroundImage && this.#backgroundImage.complete) {
             const scale = this.#canvasSize.h / this.#backgroundImage.height;
             this.#worldWidth = this.#backgroundImage.width * scale;
 
@@ -219,6 +232,16 @@ export class FighterEngine {
 
         this.#ctx.restore();
         this.#ctx.save();
+
+        if (this.#gameState == "GAME_OVER") {
+            let fontSize = FighterEngine.uiRoundSize;
+            if (this.#uiGameOverTimer > 0) {
+                const percent = this.#uiGameOverTimer / Fighter.defaultUiGameOverTimer;
+                fontSize *= (1 - percent);
+            }
+
+            this.DrawPixelText(this.#ctx, "Game Over", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiRoundFillColor);
+        }
 
         if (this.#uiRoundTimer > 0) {
             this.DrawPixelText(this.#ctx, this.#uiRoundText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (FighterEngine.uiRoundSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
@@ -287,7 +310,6 @@ export class FighterEngine {
 
     StartRound() {
         if (this.#rounds == FighterEngine.maxRounds || this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) {
-            console.log("Game Over");
             return this.GameOver();
         }
 
@@ -327,7 +349,7 @@ export class FighterEngine {
         this.#timeScale = 0.1;
 
         await FighterEngine.wait(400);
-        this.FadeTo("#000", 500 * this.#timeScale);
+        this.FadeTo("#000", 500);
         await FighterEngine.wait(1200);
         this.StartRound();
 
@@ -337,6 +359,7 @@ export class FighterEngine {
 
     GameOver() {
         this.#gameState = "GAME_OVER";
+        this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
     }
 
     SlowTime(scale = 0.1, duration = 50) {
@@ -345,7 +368,7 @@ export class FighterEngine {
     }
 
 
-    DrawPixelText(ctx, text, x, y, size = 5, fillColor = "white", outlineColor = "black") {
+    DrawPixelText(ctx, text, x, y, size = 5, fillColor = "#fff", outlineColor = "#000") {
         if (!this.#redFontSheet || !this.#greenFontSheet || size <= 0) return;
 
         const srcSize = { w: 8, h: 8 };
