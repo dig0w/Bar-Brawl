@@ -80,7 +80,7 @@ To do:
         [x] Blocking
         [x] Celebrate
         [x] Punched
-    [ ] Gameplay
+    [x] Gameplay
         [x] Movement
         [x] Jump
             [x] Should float at peak a bit, and fall faster after
@@ -100,7 +100,9 @@ To do:
         [x] Fight! text
         [x] Winner text
         [x] Game over
-        [ ] Main menu
+        [x] Main menu
+        [ ] Logo
+        [ ] Pause menu
     [ ] Gamemodes
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)

@@ -1,5 +1,6 @@
 import { Controller } from "./controller.js";
 import { Fighter } from "./fighter.js";
+import { Menu } from "./menu.js";
 
 export class FighterEngine {
     static gravity = 980;
@@ -15,12 +16,14 @@ export class FighterEngine {
 
     #backgroundImage = Object.assign(new Image(), { src: "assets/bar.png" });
 
+    #mainMenu = null;
     #fighter0 = null;
     #fighter1 = null;
     #ctrl0 = null;
     #ctrl1 = null;
 
-    #gameState = "PRE_ROUND"; // PRE_ROUND, FIGHTING, POS_ROUND, GAME_OVER
+    #gameMode;
+    #gameState;
     static maxRounds = 3;
     #rounds = 0;
     #scoreF0 = 0;
@@ -36,15 +39,15 @@ export class FighterEngine {
     static tCtx = FighterEngine.tCanvas.getContext("2d");
 
     static defaultUiGameOverTimer = .25;
-    #uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
+    #uiGameOverTimer = 0;
 
     #uiRoundText = "";
     static defaultUiRoundTimer = .75;
-    #uiRoundTimer = FighterEngine.defaultUiRoundTimer;
+    #uiRoundTimer = 0;
     #uiRoundLoc = { x: .5, y: .4 };
     static uiRoundSize = 16;
     static defaultUiRoundAfterTimer = .25;
-    #uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
+    #uiRoundAfterTimer = 0;
     #uiRoundAfterLoc = { x: .5, y: 11 };
     static uiRoundAfterSize = 8;
     static uiRoundFillColor = "#feffff";
@@ -94,6 +97,9 @@ export class FighterEngine {
         this.#ctx = this.#canvas.getContext("2d");
         this.#ctx.imageSmoothingEnabled = false;
 
+        this.#mainMenu = new Menu(this);
+        this.#mainMenu.Begin();
+
         this.#groundY = this.#canvasSize.h - this.#groundY;
         this.#worldWidth = this.#canvasSize.w;
 
@@ -117,12 +123,13 @@ export class FighterEngine {
         this.#uiRoundLoc.y *= this.#canvas.height;
 
         this.#uiRoundAfterLoc.x *= this.#canvas.width;
-        this.StartRound();
 
         FighterEngine.uiSheet.onload = () => {
             this.#redFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "r");
             this.#greenFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "g");
         }
+
+        this.SetGameState(0);
     }
 
     Tick(deltaTime) {
@@ -134,41 +141,48 @@ export class FighterEngine {
         }
         const activeDeltaTime = deltaTime * this.#timeScale;
 
-        if (this.#gameState === "FIGHTING") {
-            for (let i = this.#objects.length - 1; i >= 0; i--) {
-                this.#objects[i].Tick(activeDeltaTime);
-            }
-        } else {
-            for (let i = this.#objects.length - 1; i >= 0; i--) {
-                if (!(this.#objects[i] instanceof Controller)) this.#objects[i].Tick(activeDeltaTime);
-            }
+        console.log(this.#gameState);
+
+        if (this.#gameState === "MENU") {
+            this.#mainMenu.Tick(deltaTime);
         }
 
-        if (this.#uiGameOverTimer > 0 && this.#gameState == "GAME_OVER") {
+        for (let i = this.#objects.length - 1; i >= 0; i--) {
+            this.#objects[i].Tick(activeDeltaTime);
+        }
+
+        if (this.#uiGameOverTimer > 0) {
             this.#uiGameOverTimer -= deltaTime;
-        } else if (this.#uiRoundTimer > 0) {
+        }
+
+        if (this.#uiRoundTimer > 0) {
             this.#uiRoundTimer -= deltaTime;
 
             if (this.#uiRoundTimer <= 0) {
                 this.#uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
             }
-        } else if (this.#uiRoundAfterTimer > 0) {
+        }
+        if (this.#uiRoundAfterTimer > 0) {
             this.#uiRoundAfterTimer -= deltaTime;
 
             if (this.#uiRoundAfterTimer <= 0) {
                 this.#uiFightTimer = FighterEngine.defaultUiFightTimer;
                 this.#uiFightDone = false;
             }
-        } else if (this.#uiFightTimer > 0) {
+        }
+        if (this.#uiFightTimer > 0) {
             this.#uiFightTimer -= deltaTime;
 
             if (this.#uiFightTimer <= FighterEngine.defaultUiFightTimer / 3 && !this.#uiFightDone) {
                 this.#uiFightDone = true;
-                this.#gameState = "FIGHTING";
+                this.SetGameState(3);
             }
-        } else if (this.#uiWinnerTimer > 0) {
+        }
+
+        if (this.#uiWinnerTimer > 0) {
             this.#uiWinnerTimer -= deltaTime;
         }
+
 
         if (this.#fadeDirection !== 0) {
             this.#fadeTimer += deltaTime;
@@ -198,7 +212,7 @@ export class FighterEngine {
 
         let scrollX = 0;
 
-        if (this.#gameState == "GAME_OVER") {
+        if (this.#gameState === "GAME_OVER") {
             this.#ctx.fillStyle = "#000000";
             this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
 
@@ -233,14 +247,18 @@ export class FighterEngine {
         this.#ctx.restore();
         this.#ctx.save();
 
-        if (this.#gameState == "GAME_OVER") {
+        if (this.#gameState === "MENU") {
+            this.#mainMenu.Draw(this.#ctx);
+        }
+
+        if (this.#gameState === "GAME_OVER") {
             let fontSize = FighterEngine.uiRoundSize;
             if (this.#uiGameOverTimer > 0) {
                 const percent = this.#uiGameOverTimer / Fighter.defaultUiGameOverTimer;
                 fontSize *= (1 - percent);
             }
 
-            this.DrawPixelText(this.#ctx, "Game Over", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiRoundFillColor);
+            this.DrawPixelText(this.#ctx, "Game Over", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiRoundFillColor, "#00000000");
         }
 
         if (this.#uiRoundTimer > 0) {
@@ -308,12 +326,76 @@ export class FighterEngine {
         }
     }
 
+    SetGameState(state, mode) {
+        // States = MENU INTRO PRE_ROUND FIGHTING POS_ROUND GAME_OVER PAUSED
+        // Modes = CAREER VERSUS_LOCAL VERSUS_HOST VERSUS_CLIENT
+        switch (state) {
+            case 0:
+            case "MENU":
+                this.#gameState = "MENU";
+                mode = 0;
+
+                this.#mainMenu.Reset();
+                this.#fighter0.Reset();
+                this.#fighter1.Reset();
+                break;
+            case 1:
+            case "INTRO":
+                this.#gameState = "INTRO";
+                mode = 0;
+                break;
+            case 2:
+            case "PRE_ROUND":
+                this.#gameState = "PRE_ROUND";
+                this.StartRound();
+                break;
+            case 3:
+            case "FIGHTING":
+                this.#gameState = "FIGHTING";
+                break;
+            case 4:
+            case "POS_ROUND":
+                this.#gameState = "POS_ROUND";
+                break;
+            case 5:
+            case "GAME_OVER":
+                this.#gameState = "GAME_OVER";
+                break;
+            case 6:
+            case "PAUSED":
+                this.#gameState = "PAUSED";
+                break;
+        }
+
+        switch (mode) {
+            case 0:
+            case "CAREER":
+                this.#gameMode = "CAREER";
+                break;
+            case 1:
+            case "VERSUS_LOCAL":
+                this.#gameMode = "VERSUS_LOCAL";
+                break;
+            case 2:
+            case "VERSUS_HOST":
+                this.#gameMode = "VERSUS_HOST";
+                break;
+            case 3:
+            case "VERSUS_CLIENT":
+                this.#gameMode = "VERSUS_CLIENT";
+                break;
+        }
+    }
+
+    SlowTime(scale = 0.1, duration = 50) {
+        this.#timeScale = scale;
+        this.#timeScaleTimer = duration;
+    }
+
     StartRound() {
         if (this.#rounds == FighterEngine.maxRounds || this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) {
             return this.GameOver();
         }
-
-        this.#gameState = "PRE_ROUND";
 
         this.#fighter0.Reset();
         this.#fighter1.Reset();
@@ -351,20 +433,22 @@ export class FighterEngine {
         await FighterEngine.wait(400);
         this.FadeTo("#000", 500);
         await FighterEngine.wait(1200);
-        this.StartRound();
+        this.SetGameState(2);
 
         this.#timeScale = 1;
         this.FadeFrom("#000", 500);
     }
 
-    GameOver() {
+    async GameOver() {
         this.#gameState = "GAME_OVER";
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
-    }
 
-    SlowTime(scale = 0.1, duration = 50) {
-        this.#timeScale = scale;
-        this.#timeScaleTimer = duration;
+        await FighterEngine.wait(5000);
+        this.FadeTo("#000", 500);
+        await FighterEngine.wait(1200);
+        this.SetGameState(0);
+
+        this.FadeFrom("#000", 500);
     }
 
 
@@ -377,7 +461,7 @@ export class FighterEngine {
         const spacing = 0;
         const spaceWidth = (outSize.w / 3) | 0;
 
-        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?"]
+        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?><ç"]
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {

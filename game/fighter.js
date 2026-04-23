@@ -451,7 +451,7 @@ export class Fighter {
     }
 
     DrawUI(ctx) {
-        if (this.#engine.gameState == "GAME_OVER") return;
+        if (this.#engine.gameState != "PRE_ROUND" && this.#engine.gameState != "FIGHTING" && this.#engine.gameState != "POS_ROUND") return;
 
         const isVariantZero = this.#variant == 0;
 

@@ -27,6 +27,8 @@ export class Controller {
     }
 
     Tick(deltaTime) {
+        if (this.#engine.gameState !== "FIGHTING") return;
+
         let inputs = {
             "MoveLeft": false,
             "MoveRight": false,
@@ -77,7 +79,7 @@ export class Controller {
         this.#pawn.SetBlocking(inputs.Block);
     }
 
-    Draw() { }
+    Draw(ctx) { }
 
     Reset() {
         this.#keys = {};
