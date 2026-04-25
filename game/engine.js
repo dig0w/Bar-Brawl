@@ -1,3 +1,4 @@
+import { AIController } from "./ai.js";
 import { Controller } from "./controller.js";
 import { Fighter } from "./fighter.js";
 import { Menu } from "./menu.js";
@@ -8,6 +9,7 @@ export class FighterEngine {
     #groundY = 2;
     #worldWidth = 0;
     #timeScale = 1;
+    #timeScaleTimer = 0;
 
     #canvasSize = { w: 120, h: 80 };
     #canvas = null;
@@ -29,8 +31,9 @@ export class FighterEngine {
     #scoreF0 = 0;
     #scoreF1 = 0;
 
-
-    #timeScaleTimer = 0;
+    #sessionCode;
+    #socket;
+    #peer;
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
@@ -105,15 +108,8 @@ export class FighterEngine {
 
         this.#fighter0 = new Fighter(this, 0);
         this.#objects.push(this.#fighter0);
-
-        this.#ctrl0 = new Controller(this, this.#fighter0, 0);
-        this.#objects.push(this.#ctrl0);
-
         this.#fighter1 = new Fighter(this, 1);
         this.#objects.push(this.#fighter1);
-
-        this.#ctrl1 = new Controller(this, this.#fighter1, 1);
-        this.#objects.push(this.#ctrl1);
 
         for (let i = 0; i < this.#objects.length; i++) {
             this.#objects[i].Begin();
@@ -140,8 +136,6 @@ export class FighterEngine {
             }
         }
         const activeDeltaTime = deltaTime * this.#timeScale;
-
-        console.log(this.#gameState);
 
         if (this.#gameState === "MENU") {
             this.#mainMenu.Tick(deltaTime);
@@ -326,14 +320,14 @@ export class FighterEngine {
         }
     }
 
-    SetGameState(state, mode) {
+    SetGameState(state, mode = -1) {
         // States = MENU INTRO PRE_ROUND FIGHTING POS_ROUND GAME_OVER PAUSED
         // Modes = CAREER VERSUS_LOCAL VERSUS_HOST VERSUS_CLIENT
         switch (state) {
             case 0:
             case "MENU":
                 this.#gameState = "MENU";
-                mode = 0;
+                mode = -1;
 
                 this.#mainMenu.Reset();
                 this.#fighter0.Reset();
@@ -367,23 +361,47 @@ export class FighterEngine {
                 break;
         }
 
-        switch (mode) {
-            case 0:
-            case "CAREER":
-                this.#gameMode = "CAREER";
-                break;
-            case 1:
-            case "VERSUS_LOCAL":
-                this.#gameMode = "VERSUS_LOCAL";
-                break;
-            case 2:
-            case "VERSUS_HOST":
-                this.#gameMode = "VERSUS_HOST";
-                break;
-            case 3:
-            case "VERSUS_CLIENT":
-                this.#gameMode = "VERSUS_CLIENT";
-                break;
+        if (mode >= 0) {
+            this.DestroyObject(this.#ctrl0);
+            this.DestroyObject(this.#ctrl1);
+
+            switch (mode) {
+                case 0:
+                case "CAREER":
+                    this.#gameMode = "CAREER";
+
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#objects.push(this.#ctrl0);
+                    this.#ctrl1 = new AIController(this, this.#fighter1, 1);
+                    this.#objects.push(this.#ctrl1);
+                    break;
+                case 1:
+                case "VERSUS_LOCAL":
+                    this.#gameMode = "VERSUS_LOCAL";
+
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#objects.push(this.#ctrl0);
+                    this.#ctrl1 = new Controller(this, this.#fighter1, 1);
+                    this.#objects.push(this.#ctrl1);
+                    break;
+                case 2:
+                case "VERSUS_HOST":
+                    this.#gameMode = "VERSUS_HOST";
+
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#objects.push(this.#ctrl0);
+                    break;
+                case 3:
+                case "VERSUS_CLIENT":
+                    this.#gameMode = "VERSUS_CLIENT";
+
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#objects.push(this.#ctrl0);
+                    break;
+            }
+
+            this.#ctrl0.Begin();
+            this.#ctrl1?.Begin();
         }
     }
 
@@ -412,7 +430,7 @@ export class FighterEngine {
         const winner = loser == this.#fighter0 ? this.#fighter1 : this.#fighter0;
 
         this.#ctrl0.Reset();
-        this.#ctrl1.Reset();
+        this.#ctrl1?.Reset();
 
         this.#gameState = "POS_ROUND";
         this.#uiRoundText = ``;
@@ -452,6 +470,105 @@ export class FighterEngine {
     }
 
 
+    get sessionCode() { return this.#sessionCode; }
+
+    async Host() {
+        console.log("Starting Host Process...");
+        this.#socket = io("http://localhost:3000");
+
+        this.#socket.on("connect", () => {
+            console.log("connected");
+            this.#socket.emit("create-session");
+        });
+
+        this.#socket.on("session-created", (code) => {
+            console.log("Session Code:", code);
+            this.#sessionCode = code;
+        });
+
+        this.#socket.on("player-joined", (playerId) => {
+            console.log("Player joined! Establishing P2P...");
+
+            const p = new SimplePeer({ initiator: true, trickle: false });
+
+            p.on("signal", (data) => {
+                console.log("signal p", data);
+                this.#socket.emit("signal", { to: playerId, signal: data });
+            });
+
+            this.#socket.on("signal", (data) => {
+                console.log("signal socket", data);
+                p.signal(data.signal);
+            });
+
+            p.on("connect", () => {
+                console.log("P2P Connected!");
+            });
+
+            p.on("data", (data) => {
+                console.log(data);
+            });
+            
+            this.#peer = p;
+        });
+    }
+
+    async Join(code) {
+        if (!code) return;
+
+        console.log("Starting Join Process for code:", code);
+        this.#socket = io("http://localhost:3000");
+
+        this.#socket.on("connect", () => {
+            console.log("Connected to signaling server");
+            this.#socket.emit("join-session", code);
+        });
+
+        this.#socket.on("signal", (data) => {
+            if (!this.#peer) {
+                const p = new SimplePeer({ initiator: false, trickle: false });
+
+                p.on("signal", (data) => {
+                    console.log("Sending signal back to host...");
+                    this.#socket.emit("signal", { to: data.from, signal: data });
+                });
+
+                p.on("connect", () => {
+                    console.log("P2P Connected as GUEST!");
+                });
+
+                p.on("data", (data) => {
+                    console.log("Remote data:", data);
+                });
+
+                this.#peer = p;
+            }
+
+            console.log("Signal received from host");
+            this.#peer.signal(data.signal);
+        });
+
+        this.#socket.on("error", (msg) => {
+            console.error("Join Error:", msg);
+        });
+    }
+
+    Disconnect() {
+        console.log("Closing all connections...");
+
+        if (this.#peer) {
+            this.#peer.destroy();
+            this.#peer = null;
+        }
+
+        if (this.#socket) {
+            this.#socket.disconnect();
+            this.#socket = null;
+        }
+
+        this.#sessionCode = null;
+    }
+
     DrawPixelText(ctx, text, x, y, size = 5, fillColor = "#fff", outlineColor = "#000") {
         if (!this.#redFontSheet || !this.#greenFontSheet || size <= 0) return;
 
@@ -461,7 +578,7 @@ export class FighterEngine {
         const spacing = 0;
         const spaceWidth = (outSize.w / 3) | 0;
 
-        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?><ç"]
+        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?_"]
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {

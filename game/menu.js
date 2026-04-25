@@ -11,18 +11,28 @@ export class Menu {
 
     static menusOptions = [
         ["START", "VERSUS", "OPTIONS"],
-        ["LOCAL", "HOST", "JOIN", "BACK"],
-        ["AAA", "BBB", "CCC", "BACK"]
+        ["LOCAL", "ONLINE", "BACK"],
+        ["HOST", "JOIN", "BACK"],
+        ["cCODE", "BACK"],
+        ["iCODE", "BACK"],
+        ["AAA", "BBB", "CCC", "BACK"],
     ];
     #menuIndex = 0;
     #options = ["START", "VERSUS", "OPTIONS"];
     #selectedIndex = 0;
+    #canSelect = true;
 
     static optionsSize = 8;
     static optionsMargin = 4;
     static optionsWidth = 32;
     #optionsStartY;
     #optionsXpos;
+
+    static defaultCopyTimer = .3;
+    #copyTimer = 0;
+
+    #inputString = "";
+    #isInputActive = false;
 
     constructor(engine) {
         if (!(engine instanceof FighterEngine))
@@ -48,18 +58,49 @@ export class Menu {
         this.#engine.canvas.addEventListener("mousedown", () => {
             if (this.#mouseHovering) this.#handleSelection();
         });
+
+        window.addEventListener("keydown", (e) => {
+            if (!this.#isInputActive) return;
+
+            if (e.key === "Enter") {
+                this.#isInputActive = false;
+
+                if(this.#inputString.length === 5) this.#engine.Join(this.#inputString);
+            } else if (e.key === "Backspace") {
+                this.#inputString = this.#inputString.slice(0, -1);
+            } else if (e.key.length === 1 && this.#inputString.length < 5) {
+                if (/[a-zA-Z0-9]/.test(e.key)) {
+                    this.#inputString += e.key.toUpperCase();
+                }
+            }
+        });
+
+        window.addEventListener("paste", (e) => {
+            if (!this.#isInputActive) return;
+
+            const pasteData = (e.clipboardData || window.clipboardData).getData("text");
+            this.#inputString = this.#inputString.slice(0, -1);
+            
+            const cleanPaste = pasteData.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+            const spaceLeft = 5 - this.#inputString.length;
+            if (spaceLeft > 0) {
+                this.#inputString += cleanPaste.substring(0, spaceLeft);
+            }
+
+            e.preventDefault();
+        });
     }
 
-    #isJustPressed(code) {
-        return this.#keys[code] && !this.#lastKeys[code];
-    }
+    #isJustPressed(code) { return this.#keys[code] && !this.#lastKeys[code]; }
 
     Tick(deltaTime) {
-        if (this.#isJustPressed("ArrowUp") || this.#isJustPressed("KeyW")) {
+        if (this.#engine.gameState !== "MENU" || !this.#canSelect) return;
+
+        if (this.#isJustPressed("ArrowUp")) {
             this.#selectedIndex = (this.#selectedIndex - 1 + this.#options.length) % this.#options.length;
         }
 
-        if (this.#isJustPressed("ArrowDown") || this.#isJustPressed("KeyS")) {
+        if (this.#isJustPressed("ArrowDown")) {
             this.#selectedIndex = (this.#selectedIndex + 1) % this.#options.length;
         }
 
@@ -67,7 +108,7 @@ export class Menu {
             this.#handleSelection();
         }
 
-        if (this.#isJustPressed("Escape") || this.#isJustPressed("Backspace")) {
+        if (this.#isJustPressed("Escape")) {
             this.ToMenu(0);
         }
 
@@ -87,59 +128,72 @@ export class Menu {
 
         if (this.#mouseHovering) {
             this.#engine.canvas.style.cursor = "pointer";
+
+            if (this.#options[this.#selectedIndex].startsWith("i")) this.#engine.canvas.style.cursor = "text";
         } else {
             this.#engine.canvas.style.cursor = "default";
         }
+
+        if (this.#copyTimer > 0) this.#copyTimer -= deltaTime;
     }
 
-    async #handleSelection() {
+    #handleSelection() {
+        if (this.#engine.gameState !== "MENU" || !this.#canSelect) return;
+
         const choice = this.#options[this.#selectedIndex];
 
         switch (choice) {
             case "START":
-                await FighterEngine.wait(400);
-                this.#engine.FadeTo("#000", 500);
-                await FighterEngine.wait(1200);
-                this.#engine.SetGameState(2, 0);
-
-                this.#engine.FadeFrom("#000", 500);
+                this.StartGame(0);
                 break;
             case "VERSUS":
                 this.ToMenu(1);
                 break;
             case "OPTIONS":
-                this.ToMenu(2);
+                this.ToMenu(5);
                 break;
             case "LOCAL":
-                await FighterEngine.wait(400);
-                this.#engine.FadeTo("#000", 500);
-                await FighterEngine.wait(1200);
-                this.#engine.SetGameState(2, 1);
-
-                this.#engine.FadeFrom("#000", 500);
+                this.StartGame(1);
+                break;
+            case "ONLINE":
+                this.ToMenu(2);
                 break;
             case "HOST":
-                await FighterEngine.wait(400);
-                this.#engine.FadeTo("#000", 500);
-                await FighterEngine.wait(1200);
-                this.#engine.SetGameState(2, 2);
-
-                this.#engine.FadeFrom("#000", 500);
+                this.#engine.Host();
+                this.ToMenu(3);
+                break;
+            case "cCODE":
+                navigator.clipboard.writeText(this.#engine.sessionCode);
+                this.#copyTimer = Menu.defaultCopyTimer;
                 break;
             case "JOIN":
-                await FighterEngine.wait(400);
-                this.#engine.FadeTo("#000", 500);
-                await FighterEngine.wait(1200);
-                this.#engine.SetGameState(2, 3);
-
-                this.#engine.FadeFrom("#000", 500);
+                this.ToMenu(4);
                 break;
-            case "":
+            case "iCODE":
+                this.#isInputActive = true;
+
+                if(this.#inputString.length === 5) {
+                    this.#isInputActive = false;
+                    this.#engine.Join(this.#inputString);
+                }
                 break;
             case "BACK":
-                this.#menuIndex = 0;
-                this.#selectedIndex = 0;
-                this.#options = Menu.menusOptions[this.#menuIndex];
+                let i;
+                switch (this.#menuIndex) {
+                    case 2:
+                        i = 1;
+                        break;
+                    case 3:
+                    case 4:
+                        i = 2;
+                        this.#engine.Disconnect();
+                        break;
+                    default:
+                        i = 0;
+                        break;
+                }
+
+                this.ToMenu(i);
                 break;
         }
     }
@@ -154,7 +208,26 @@ export class Menu {
             const isSelected = i === this.#selectedIndex;
             const yPos = this.#optionsStartY + (i * (Menu.optionsSize + Menu.optionsMargin));
 
-            this.#engine.DrawPixelText(ctx, text, this.#optionsXpos, yPos, Menu.optionsSize, isSelected ? "#ffffff" : "#666666", "#00000000");
+            let displayText = text;
+            let isSpecial = false;
+
+            // Handle special formatting
+            if (text.startsWith("c")) {
+                isSpecial = true;
+                displayText = this.#copyTimer > 0 ? "COPIED!" : (this.#engine.sessionCode || "NO CODE");
+            } else if (text.startsWith("i")) {
+                isSpecial = true;
+                displayText = this.#inputString + (this.#isInputActive && Date.now() % 1000 < 500 && this.#inputString.length < 5 ? "_" : "");
+                if (displayText === "" && !this.#isInputActive) displayText = "ENTER CODE";
+            }
+
+            if (isSpecial) {
+                ctx.fillStyle = isSelected ? "#222222" : "#111111";
+                const rectW = Menu.optionsWidth * 2;
+                ctx.fillRect(this.#optionsXpos - Menu.optionsWidth, yPos - 1, rectW, Menu.optionsSize + 2);
+            }
+
+            this.#engine.DrawPixelText(ctx, displayText, this.#optionsXpos, yPos, Menu.optionsSize, isSelected ? "#ffffff" : "#666666", "#00000000");
         });
     }
 
@@ -163,6 +236,7 @@ export class Menu {
         this.#lastKeys = {};
 
         // this.#mouse = { x: 0, y: 0 };
+        this.#canSelect = true;
 
         this.ToMenu(0);
     }
@@ -171,5 +245,17 @@ export class Menu {
         this.#menuIndex = i;
         this.#selectedIndex = 0;
         this.#options = Menu.menusOptions[this.#menuIndex];
+    }
+
+    async StartGame(mode) {
+        this.#canSelect = false;
+        this.#engine.canvas.style.cursor = "none";
+
+        await FighterEngine.wait(400);
+        this.#engine.FadeTo("#000", 500);
+        await FighterEngine.wait(1200);
+        this.#engine.SetGameState(2, mode);
+
+        this.#engine.FadeFrom("#000", 500);
     }
 }

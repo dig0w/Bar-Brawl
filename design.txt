@@ -107,3 +107,4 @@ To do:
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)
         [ ] Online (peer-to-peer)   (Versus -> Online)
+    [ ] AI

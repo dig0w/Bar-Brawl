@@ -1,0 +1,26 @@
+{
+  "name": "fight-game-server",
+  "version": "0.0.0",
+  "description": "A signaling server to initialize the peer-to-peer connection",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dig0w/Fight-Game.git"
+  },
+  "keywords": [
+    "signaling",
+    "server"
+  ],
+  "author": "dig0w",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dig0w/Fight-Game/issues"
+  },
+  "homepage": "https://github.com/dig0w/Fight-Game#readme",
+  "dependencies": {
+    "socket.io": "^4.8.3"
+  }
+}
