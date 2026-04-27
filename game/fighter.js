@@ -54,7 +54,7 @@ export class Fighter {
     static defaultPunchedCooldown = 12 / 60;
     #punchedCooldown = 0;
 
-    static defaultDieAnimTimer = 14 / 60;
+    static defaultDieAnimTimer = 10 / 60;
     static maxDieAnimState = 3;
     #dieAnimState = 0;
     #dieAnimTimer = 0;
@@ -84,8 +84,8 @@ export class Fighter {
     #fistHitBoxOffsetEnd = null;
     #fistHitBox = null;
 
-    // static hitboxesDamage = [15, 10, 7, 7, 5, 5];
-    static hitboxesDamage = [200, 200, 200, 200, 200, 200];
+    static hitboxesDamage = [15, 10, 7, 7, 5, 5];
+    // static hitboxesDamage = [200, 200, 200, 200, 200, 200];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
     static defaultGhostTimer = 4 / 60;
@@ -133,6 +133,7 @@ export class Fighter {
     }
 
     get loc() { return this.#loc }
+    get vel() { return this.#vel }
     get size() { return this.#size }
 
     get isGrounded() { return this.#loc.y >= this.#groundY }
@@ -206,7 +207,7 @@ export class Fighter {
         }
 
         // Face Opponent
-        const opponent = (this.#engine.fighter0 === this) ? this.#engine.fighter1 : this.#engine.fighter0;
+        const opponent = this.#engine.getOpponent(this);
         this.#facingRight = this.#loc.x < opponent.loc.x;
 
         // Update Hitboxes

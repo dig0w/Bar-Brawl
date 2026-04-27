@@ -34,6 +34,7 @@ export class FighterEngine {
     #sessionCode;
     #socket;
     #peer;
+    #remoteInputMask = 0;
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
@@ -89,6 +90,8 @@ export class FighterEngine {
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
 
+    getOpponent(fighter) { return (this.fighter0 === fighter) ? this.fighter1 : this.fighter0 }
+
     getScore(fighter) { return fighter == this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
 
     Begin() {
@@ -137,12 +140,24 @@ export class FighterEngine {
         }
         const activeDeltaTime = deltaTime * this.#timeScale;
 
+        // console.log(this.#gameState);
+
         if (this.#gameState === "MENU") {
             this.#mainMenu.Tick(deltaTime);
         }
 
         for (let i = this.#objects.length - 1; i >= 0; i--) {
             this.#objects[i].Tick(activeDeltaTime);
+        }
+
+        if (this.#gameState === "FIGHTING" && (this.#gameMode === "VERSUS_HOST" || this.#gameMode === "VERSUS_CLIENT")) {
+            const localMask = this.#ctrl0.GetInputMask();
+
+            if (this.#peer && this.#peer.connected) {
+                this.#peer.send(new Uint8Array([localMask]));
+            }
+
+            this.#ctrl1.SetInputMask(this.#remoteInputMask);
         }
 
         if (this.#uiGameOverTimer > 0) {
@@ -332,6 +347,12 @@ export class FighterEngine {
                 this.#mainMenu.Reset();
                 this.#fighter0.Reset();
                 this.#fighter1.Reset();
+
+                this.#rounds = 0;
+                this.#scoreF0 = 0;
+                this.#scoreF1 = 0;
+
+                this.#uiRoundText = "";
                 break;
             case 1:
             case "INTRO":
@@ -370,9 +391,9 @@ export class FighterEngine {
                 case "CAREER":
                     this.#gameMode = "CAREER";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 2);
                     this.#objects.push(this.#ctrl0);
-                    this.#ctrl1 = new AIController(this, this.#fighter1, 1);
+                    this.#ctrl1 = new AIController(this, this.#fighter1);
                     this.#objects.push(this.#ctrl1);
                     break;
                 case 1:
@@ -388,15 +409,19 @@ export class FighterEngine {
                 case "VERSUS_HOST":
                     this.#gameMode = "VERSUS_HOST";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 2);
                     this.#objects.push(this.#ctrl0);
+                    this.#ctrl1 = new Controller(this, this.#fighter1, 0, true);
+                    this.#objects.push(this.#ctrl1);
                     break;
                 case 3:
                 case "VERSUS_CLIENT":
                     this.#gameMode = "VERSUS_CLIENT";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#ctrl0 = new Controller(this, this.#fighter1, 2);
                     this.#objects.push(this.#ctrl0);
+                    this.#ctrl1 = new Controller(this, this.#fighter0, 0, true);
+                    this.#objects.push(this.#ctrl1);
                     break;
             }
 
@@ -458,7 +483,7 @@ export class FighterEngine {
     }
 
     async GameOver() {
-        this.#gameState = "GAME_OVER";
+        this.SetGameState(5);
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
 
         await FighterEngine.wait(5000);
@@ -472,90 +497,65 @@ export class FighterEngine {
 
     get sessionCode() { return this.#sessionCode; }
 
-    async Host() {
-        console.log("Starting Host Process...");
+    #connectSignaling(callback) {
+        if (this.#socket) return;
         this.#socket = io("http://localhost:3000");
 
-        this.#socket.on("connect", () => {
-            console.log("connected");
-            this.#socket.emit("create-session");
+        this.#socket.on("connect", callback);
+
+        this.#socket.on("disconnect", () => {
+            if (!this.#peer?.connected) this.Disconnect();
+        });
+    }
+
+    #initPeer(initiator, targetId, gameStateMode) {
+        const p = new SimplePeer({ initiator, trickle: false });
+
+        p.on("signal", signal => {
+            this.#socket.emit("signal", { to: targetId, signal });
         });
 
-        this.#socket.on("session-created", (code) => {
-            console.log("Session Code:", code);
-            this.#sessionCode = code;
+        p.on("connect", () => {
+            this.SetGameState(2, gameStateMode);
         });
 
-        this.#socket.on("player-joined", (playerId) => {
-            console.log("Player joined! Establishing P2P...");
+        p.on("data", data => {
+            this.#remoteInputMask = data[0];
+        });
 
-            const p = new SimplePeer({ initiator: true, trickle: false });
+        p.on("close", () => this.Disconnect());
+        p.on("error", () => this.Disconnect());
 
-            p.on("signal", (data) => {
-                console.log("signal p", data);
-                this.#socket.emit("signal", { to: playerId, signal: data });
-            });
+        this.#peer = p;
+        return p;
+    }
 
-            this.#socket.on("signal", (data) => {
-                console.log("signal socket", data);
-                p.signal(data.signal);
-            });
+    async Host() {
+        this.#connectSignaling(() => this.#socket.emit("create-session"));
 
-            p.on("connect", () => {
-                console.log("P2P Connected!");
-            });
+        this.#socket.on("session-created", code => this.#sessionCode = code);
 
-            p.on("data", (data) => {
-                console.log(data);
-            });
-            
-            this.#peer = p;
+        this.#socket.on("player-joined", playerId => {
+            const p = this.#initPeer(true, playerId, 2);
+            this.#socket.on("signal", data => p.signal(data.signal));
         });
     }
 
     async Join(code) {
         if (!code) return;
+        this.#connectSignaling(() => this.#socket.emit("join-session", code));
 
-        console.log("Starting Join Process for code:", code);
-        this.#socket = io("http://localhost:3000");
-
-        this.#socket.on("connect", () => {
-            console.log("Connected to signaling server");
-            this.#socket.emit("join-session", code);
-        });
-
-        this.#socket.on("signal", (data) => {
+        this.#socket.on("signal", data => {
             if (!this.#peer) {
-                const p = new SimplePeer({ initiator: false, trickle: false });
+                const p = this.#initPeer(false, data.from, 3);
+                p.signal(data.signal);
 
-                p.on("signal", (data) => {
-                    console.log("Sending signal back to host...");
-                    this.#socket.emit("signal", { to: data.from, signal: data });
-                });
-
-                p.on("connect", () => {
-                    console.log("P2P Connected as GUEST!");
-                });
-
-                p.on("data", (data) => {
-                    console.log("Remote data:", data);
-                });
-
-                this.#peer = p;
+                this.#socket.on("signal", d => p.signal(d.signal));
             }
-
-            console.log("Signal received from host");
-            this.#peer.signal(data.signal);
-        });
-
-        this.#socket.on("error", (msg) => {
-            console.error("Join Error:", msg);
         });
     }
 
     Disconnect() {
-        console.log("Closing all connections...");
-
         if (this.#peer) {
             this.#peer.destroy();
             this.#peer = null;
@@ -567,7 +567,9 @@ export class FighterEngine {
         }
 
         this.#sessionCode = null;
+        this.SetGameState(0);
     }
+
 
     DrawPixelText(ctx, text, x, y, size = 5, fillColor = "#fff", outlineColor = "#000") {
         if (!this.#redFontSheet || !this.#greenFontSheet || size <= 0) return;

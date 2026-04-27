@@ -4,9 +4,8 @@ import { Fighter } from "./fighter.js";
 export class AIController {
     #engine = null;
     #pawn = null;
-    #variant = 0;
 
-    constructor(engine, pawn, variant = 0) {
+    constructor(engine, pawn) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
         if (!(pawn instanceof Fighter))
@@ -14,13 +13,22 @@ export class AIController {
 
         this.#engine = engine;
         this.#pawn = pawn;
-        this.#variant = variant;
     }
 
     Begin() { }
 
-    Tick(deltaTime) {
-        this.#pawn.moveInput = 1;
+    Tick(deltaTime) {        
+        if (this.#engine.gameState !== "FIGHTING") return;
+
+        const opponent = this.#engine.getOpponent(this);
+        if(Math.abs(opponent.loc.x - this.#pawn.loc.x) < 29){
+            this.#pawn.Punch()
+        }
+        if (opponent.vel.x > 50){
+            this.#pawn.SetBlocking(true);
+        } else {
+            this.#pawn.SetBlocking(false);
+        }
     }
 
     Draw(ctx) { }
