@@ -19,6 +19,8 @@ export class Controller {
         "Block": false,
     };
 
+    #networkLatch = 0;
+
     constructor(engine, pawn, variant = 0, remote = false) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
@@ -87,6 +89,9 @@ export class Controller {
         }
 
         this.#pawn.SetBlocking(this.inputs.Block);
+
+        if (this.inputs.Punch) this.#networkLatch |= 1;
+        if (this.inputs.Block) this.#networkLatch |= 2;
     }
 
     Draw(ctx) { }
@@ -100,21 +105,13 @@ export class Controller {
     }
 
     GetInputMask() {
-        let mask = 0;
-        if (this.inputs.MoveLeft) mask |= 1;
-        if (this.inputs.MoveRight) mask |= 2;
-        if (this.inputs.Jump) mask |= 4;
-        if (this.inputs.Punch) mask |= 8;
-        if (this.inputs.Block) mask |= 16;
-
+        const mask = this.#networkLatch;
+        this.#networkLatch = 0; 
         return mask;
     }
 
     SetInputMask(mask) {
-        this.inputs.MoveLeft = (mask & 1) !== 0;
-        this.inputs.MoveRight = (mask & 2) !== 0;
-        this.inputs.Jump = (mask & 4) !== 0;
-        this.inputs.Punch = (mask & 8) !== 0;
-        this.inputs.Block = (mask & 16) !== 0;
+        this.inputs.Punch = (mask & 1) !== 0;
+        this.inputs.Block = (mask & 2) !== 0;
     }
 }

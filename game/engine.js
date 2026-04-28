@@ -34,7 +34,13 @@ export class FighterEngine {
     #sessionCode;
     #socket;
     #peer;
-    #remoteInputMask = 0;
+    static networkTick = 32;
+    static networkTickRate = 1 / FighterEngine.networkTick;
+    #networkAccumulator = 0;
+    #lastSentState = {};
+    #remoteStateBuffer = null;
+    #currentFrame = -1;
+    #lastReceivedFrame = -1;
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
@@ -78,7 +84,9 @@ export class FighterEngine {
     constructor() {
     }
 
-    get gameState() { return this.#gameState; } 
+    get gameState() { return this.#gameState; }
+    get gameMode() { return this.#gameMode; }
+
     get gravity() { return FighterEngine.gravity; }
     get friction() { return FighterEngine.friction; }
     get groundY() { return this.#groundY; }
@@ -87,9 +95,10 @@ export class FighterEngine {
     get canvasSize() { return this.#canvasSize; }
     get canvas() { return this.#canvas; }
 
+    get isOnline() { return (this.#gameMode === "VERSUS_HOST" || this.#gameMode === "VERSUS_CLIENT") }
+
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
-
     getOpponent(fighter) { return (this.fighter0 === fighter) ? this.fighter1 : this.fighter0 }
 
     getScore(fighter) { return fighter == this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
@@ -140,25 +149,68 @@ export class FighterEngine {
         }
         const activeDeltaTime = deltaTime * this.#timeScale;
 
-        // console.log(this.#gameState);
-
         if (this.#gameState === "MENU") {
             this.#mainMenu.Tick(deltaTime);
+        }
+
+        this.#networkAccumulator += deltaTime;
+        if (this.#gameState === "FIGHTING" && this.isOnline && this.#networkAccumulator >= FighterEngine.networkTickRate) {
+            this.#currentFrame = (this.#currentFrame + 1) % 256;
+
+            const isHost = this.#gameMode === "VERSUS_HOST";
+
+            if (this.#peer && this.#peer.connected) {
+                const myFighter = isHost ? this.#fighter0 : this.#fighter1;
+
+                const currentState = myFighter.GetNetworkState();
+                const delta = { f: this.#currentFrame };
+                let hasChanges = false;
+
+                for (let key in currentState) {
+                    if (currentState[key] !== this.#lastSentState[key]) {
+                        delta[key] = currentState[key];
+                        this.#lastSentState[key] = currentState[key];
+                        hasChanges = true;
+                    }
+                }
+
+                delta["c"] = this.#ctrl0.GetInputMask();
+
+                const hit = myFighter.GetHitReport();
+                if (hit) delta["h"] = hit;
+
+                if (isHost) {
+                    delta["hp0"] = (this.#fighter0.health | 0);
+                    delta["hp1"] = (this.#fighter1.health | 0);
+                }
+
+                this.#peer.send(JSON.stringify(delta));
+            }
+
+            if (this.#remoteStateBuffer) {
+                const data = this.#remoteStateBuffer;
+                const theirFighter = isHost ? this.#fighter1 : this.#fighter0;
+
+                if (isHost && data.h) theirFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
+
+                if (!isHost) {
+                    if (data.hp0 !== undefined) this.#fighter0.SetNetworkState({ hp: data.hp0 });
+                    if (data.hp1 !== undefined) this.#fighter1.SetNetworkState({ hp: data.hp1 });
+                }
+
+                theirFighter.SetNetworkState(data);
+                this.#ctrl1.SetInputMask(data.c);
+
+                this.#remoteStateBuffer = null;
+            }
+
+            this.#networkAccumulator -= FighterEngine.networkTickRate;
         }
 
         for (let i = this.#objects.length - 1; i >= 0; i--) {
             this.#objects[i].Tick(activeDeltaTime);
         }
 
-        if (this.#gameState === "FIGHTING" && (this.#gameMode === "VERSUS_HOST" || this.#gameMode === "VERSUS_CLIENT")) {
-            const localMask = this.#ctrl0.GetInputMask();
-
-            if (this.#peer && this.#peer.connected) {
-                this.#peer.send(new Uint8Array([localMask]));
-            }
-
-            this.#ctrl1.SetInputMask(this.#remoteInputMask);
-        }
 
         if (this.#uiGameOverTimer > 0) {
             this.#uiGameOverTimer -= deltaTime;
@@ -513,18 +565,37 @@ export class FighterEngine {
 
         p.on("signal", signal => {
             this.#socket.emit("signal", { to: targetId, signal });
+            console.log("signal p");
         });
 
         p.on("connect", () => {
+            console.log("connect p");
             this.SetGameState(2, gameStateMode);
         });
 
-        p.on("data", data => {
-            this.#remoteInputMask = data[0];
+        p.on("data", rawData => {
+            try {
+                const data = JSON.parse(rawData);
+
+                const newF = data.f;
+                const oldF = this.#lastReceivedFrame;
+
+                const isNewer = (newF > oldF) || (oldF - newF > 200);
+
+                this.#lastReceivedFrame = newF;
+                this.#remoteStateBuffer = data;
+
+                console.log("data p", data);
+            } catch (e) {
+                console.error("Failed to parse network packet", e);
+            }
         });
 
         p.on("close", () => this.Disconnect());
-        p.on("error", () => this.Disconnect());
+        p.on("error", (a) => {
+            console.log("error p", a);
+            this.Disconnect()
+        });
 
         this.#peer = p;
         return p;
@@ -568,6 +639,27 @@ export class FighterEngine {
 
         this.#sessionCode = null;
         this.SetGameState(0);
+    }
+
+    #getDelta(fighter) {
+        const currentState = fighter.GetNetworkState();
+        const delta = {};
+        let changed = false;
+
+        if (!this.#lastSentState) {
+            this.#lastSentState = currentState;
+            return currentState;
+        }
+
+        for (let key in currentState) {
+            if (currentState[key] !== this.#lastSentState[key]) {
+                delta[key] = currentState[key];
+                this.#lastSentState[key] = currentState[key];
+                changed = true;
+            }
+        }
+
+        return changed ? delta : null;
     }
 
 

@@ -103,6 +103,8 @@ export class Fighter {
     static iconStartSize = { w: 21, h: 21 };
     static iconSize = { w: 9, h: 9 };
 
+    #networkHitReport = 0;
+
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
@@ -139,6 +141,7 @@ export class Fighter {
     get isGrounded() { return this.#loc.y >= this.#groundY }
 
     get hitboxes() { return this.#hitboxes }
+    get health() { return this.#health }
 
     Begin() {
         this.#groundY = this.#engine.groundY - this.#size.h;
@@ -263,7 +266,7 @@ export class Fighter {
                         if (intersected) {
                             this.#punchHasHit = true;
 
-                            opponent.TakeDamage(hitbox, hitPoint, this.#vel.x);
+                            opponent.TakeDamage(i, hitPoint, this.#vel.x);
                             break;
                         }
                     }
@@ -566,13 +569,10 @@ export class Fighter {
         }
     }
 
-    TakeDamage(hitbox, hitPoint, hitSpeed) {
-        const i = this.#hitboxes.indexOf(hitbox);
-            if (i < 0) return;
-        
+    TakeDamage(hitboxIndex, hitPoint, hitSpeed) {
         const diffSpeed = (hitSpeed - this.#vel.x) * (this.#facingRight ? -1 : 1);
         const diffSpeedRatio = 1 + (diffSpeed / 125) / 2;
-        let damage = Fighter.hitboxesDamage[i] * diffSpeedRatio;
+        let damage = Fighter.hitboxesDamage[hitboxIndex] * diffSpeedRatio;
 
         let knockback = 500 * (damage / 30);
 
@@ -581,7 +581,9 @@ export class Fighter {
             knockback = knockback * 0.4;
         }
 
-        this.#health -= damage;
+        this.SetHitReport(hitboxIndex, hitPoint, hitSpeed);
+
+        if (this.#engine.gameMode !== "VERSUS_CLIENT") this.#health -= damage;
 
         this.#punchAnimState = -1;
 
@@ -644,6 +646,35 @@ export class Fighter {
         this.#punchAnimState = -1;
         this.#blockAnimState = -1;
         this.#celebrating = false;
+    }
+
+
+    GetNetworkState() {
+        return {
+            x: (this.#loc.x | 0),
+            y: (this.#loc.y | 0),
+            vx: (this.#vel.x.toFixed(2)),
+            vy: Number(this.#vel.y.toFixed(2)),
+        };
+    }
+
+    SetNetworkState(state) {
+        if (state.x !== undefined) this.#loc.x = state.x;
+        if (state.y !== undefined) this.#loc.y = state.y;
+        if (state.vx !== undefined) this.#vel.x = state.vx;
+        if (state.vy !== undefined) this.#vel.y = state.vy;
+
+        if (state.hp !== undefined) this.#health = state.hp;
+    }
+
+    GetHitReport() {
+        const report = this.#networkHitReport;
+        this.#networkHitReport = null;
+        return report;
+    }
+
+    SetHitReport(hitboxIndex, hitPoint, hitSpeed) {
+        this.#networkHitReport = { i: hitboxIndex, p: hitPoint, s: hitSpeed };
     }
 
 

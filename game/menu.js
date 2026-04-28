@@ -168,6 +168,7 @@ export class Menu {
                 break;
             case "JOIN":
                 this.ToMenu(4);
+                this.#inputString = "";
                 break;
             case "iCODE":
                 this.#isInputActive = true;

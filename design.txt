@@ -61,7 +61,7 @@ To do:
         [ ] Bottle thrown and broken
         [ ] Fade to black
     [ ] Bar Scene
-        [x] Bar at round 1
+        [ ] Bar at round 1
         [ ] Bar at round 2
         [ ] Bar at round 3
     [x] Bald Character
@@ -80,16 +80,17 @@ To do:
         [x] Blocking
         [x] Celebrate
         [x] Punched
-    [x] Gameplay
+    [ ] Gameplay
         [x] Movement
         [x] Jump
             [x] Should float at peak a bit, and fall faster after
         [x] Punch
         [x] Block
-        [x] Hit
+        [ ] Hit
             [x] Hit damage based on velocity
-            [x] On Hit slow down time a bit
-            [x] On Hit spawn blood sprite
+            [x] On hit slow down time a bit
+            [x] On hit spawn blood sprite
+            [ ] On hit camera shake
         [x] Rounds
         [ ] Crouch?
         [ ] Kick?
@@ -108,3 +109,7 @@ To do:
         [ ] Local AI                (Start)
         [ ] Online (peer-to-peer)   (Versus -> Online)
     [ ] AI
+    [ ] Multiplayer
+        [x] Send game state with delta compression
+        [x] Prefeer attacker over defender
+        [ ] Host manages health and score
