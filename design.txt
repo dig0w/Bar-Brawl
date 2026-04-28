@@ -80,17 +80,17 @@ To do:
         [x] Blocking
         [x] Celebrate
         [x] Punched
-    [ ] Gameplay
+    [x] Gameplay
         [x] Movement
         [x] Jump
             [x] Should float at peak a bit, and fall faster after
         [x] Punch
         [x] Block
-        [ ] Hit
+        [x] Hit
             [x] Hit damage based on velocity
-            [x] On hit slow down time a bit
+            [x] On hit slow down time a bit (only on hit, or maybe on every punch?)
             [x] On hit spawn blood sprite
-            [ ] On hit camera shake
+            [x] On hit camera shake
         [x] Rounds
         [ ] Crouch?
         [ ] Kick?

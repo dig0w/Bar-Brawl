@@ -76,6 +76,11 @@ export class FighterEngine {
     static uiWinnerFillColor = "#feffff";
     static uiWinnerOutlineColor = "#545454";
 
+    #shakeTimer = 0;
+    #shakeDuration = 0;
+    #shakeIntensity = 0;
+    #shakeOffset = { x: 0, y: 0 };
+
     #fadeColor = "#000";
     #fadeAlpha = 0;
     #fadeDuration = 0;
@@ -253,6 +258,22 @@ export class FighterEngine {
         }
 
 
+        if (this.#shakeTimer > 0) {
+            this.#shakeTimer -= deltaTime;
+
+            if (this.#shakeTimer <= 0) {
+                this.#shakeTimer = 0;
+                this.#shakeOffset.x = 0;
+                this.#shakeOffset.y = 0;
+            } else {
+                const progress = this.#shakeTimer / this.#shakeDuration;
+                const currentPower = this.#shakeIntensity * progress;
+
+                this.#shakeOffset.x = (Math.random() * 2 - 1) * currentPower;
+                this.#shakeOffset.y = (Math.random() * 2 - 1) * currentPower;
+            }
+        }
+
         if (this.#fadeDirection !== 0) {
             this.#fadeTimer += deltaTime;
 
@@ -273,11 +294,14 @@ export class FighterEngine {
     }
 
     Draw() {
-        // Clear the canvas
         this.#ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
 
         this.#ctx.save();
         this.#ctx.scale(2, 2);
+
+        if (this.#shakeTimer > 0) {
+            this.#ctx.translate(this.#shakeOffset.x, this.#shakeOffset.y);
+        }
 
         let scrollX = 0;
 
@@ -492,7 +516,7 @@ export class FighterEngine {
 
     SlowTime(scale = 0.1, duration = 50) {
         this.#timeScale = scale;
-        this.#timeScaleTimer = duration;
+        this.#timeScaleTimer = duration / 1000;
     }
 
     StartRound() {
@@ -562,7 +586,7 @@ export class FighterEngine {
 
     #connectSignaling(callback) {
         if (this.#socket) return;
-        this.#socket = io("http://192.168.1.67:3000");
+        this.#socket = io("http://localhost:3000");
 
         this.#socket.on("connect", callback);
 
@@ -581,7 +605,7 @@ export class FighterEngine {
 
         p.on("connect", () => {
             console.log("connect p");
-            this.SetGameState(2, gameStateMode);
+            this.#mainMenu.StartGame(gameStateMode);
         });
 
         p.on("data", rawData => {
@@ -741,6 +765,12 @@ export class FighterEngine {
 
             currentX += outSize.w;
         }
+    }
+
+    CameraShake(intensity = 5, duration = 300) {
+        this.#shakeIntensity = intensity;
+        this.#shakeDuration = duration / 1000;
+        this.#shakeTimer = this.#shakeDuration;
     }
 
     FadeTo(color = "#000", duration = 500) {

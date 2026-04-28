@@ -597,12 +597,15 @@ export class Fighter {
         this.#bloodLoc.x = hitPoint.x;
         this.#bloodLoc.y = hitPoint.y;
 
+        let intensity = 1;
         if (this.#health <= 0) {
             this.#health = 0;
             this.Die();
+            intensity = 3;
         }
 
-        this.#engine.SlowTime(0.1, .1);
+        this.#engine.CameraShake(intensity, 300);
+        this.#engine.SlowTime(0, 100);
     }
 
     Die() {
