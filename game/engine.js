@@ -41,6 +41,7 @@ export class FighterEngine {
     #remoteStateBuffer = null;
     #currentFrame = -1;
     #lastReceivedFrame = -1;
+    #roundOverTrigger = 0;
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
@@ -154,7 +155,7 @@ export class FighterEngine {
         }
 
         this.#networkAccumulator += deltaTime;
-        if (this.#gameState === "FIGHTING" && this.isOnline && this.#networkAccumulator >= FighterEngine.networkTickRate) {
+        if (this.isOnline && this.#networkAccumulator >= FighterEngine.networkTickRate) {
             this.#currentFrame = (this.#currentFrame + 1) % 256;
 
             const isHost = this.#gameMode === "VERSUS_HOST";
@@ -182,6 +183,11 @@ export class FighterEngine {
                 if (isHost) {
                     delta["hp0"] = (this.#fighter0.health | 0);
                     delta["hp1"] = (this.#fighter1.health | 0);
+
+                    if (this.#roundOverTrigger > 0) {
+                        delta["ro"] = this.#roundOverTrigger;
+                        this.#roundOverTrigger = 0;
+                    }
                 }
 
                 this.#peer.send(JSON.stringify(delta));
@@ -200,6 +206,8 @@ export class FighterEngine {
 
                 theirFighter.SetNetworkState(data);
                 this.#ctrl1.SetInputMask(data.c);
+
+                if (data.ro !== undefined && data.ro > 0) this.RoundOver(data.ro == 1 ? this.#fighter0 : this.#fighter1);
 
                 this.#remoteStateBuffer = null;
             }
@@ -509,8 +517,10 @@ export class FighterEngine {
         this.#ctrl0.Reset();
         this.#ctrl1?.Reset();
 
-        this.#gameState = "POS_ROUND";
+        this.SetGameState(4);
         this.#uiRoundText = ``;
+
+        if (this.isOnline) this.#roundOverTrigger = loser == this.#fighter0 ? 1 : 2;
 
         await FighterEngine.wait(50);
 
@@ -542,6 +552,7 @@ export class FighterEngine {
         this.FadeTo("#000", 500);
         await FighterEngine.wait(1200);
         this.SetGameState(0);
+        if (this.isOnline) this.Disconnect();
 
         this.FadeFrom("#000", 500);
     }
@@ -551,7 +562,7 @@ export class FighterEngine {
 
     #connectSignaling(callback) {
         if (this.#socket) return;
-        this.#socket = io("http://localhost:3000");
+        this.#socket = io("http://192.168.1.67:3000");
 
         this.#socket.on("connect", callback);
 

@@ -107,9 +107,9 @@ To do:
     [ ] Gamemodes
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)
-        [ ] Online (peer-to-peer)   (Versus -> Online)
+        [x] Online (peer-to-peer)   (Versus -> Online)
     [ ] AI
-    [ ] Multiplayer
+    [x] Multiplayer
         [x] Send game state with delta compression
         [x] Prefeer attacker over defender
-        [ ] Host manages health and score
+        [x] Host manages health and score

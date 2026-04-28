@@ -653,7 +653,7 @@ export class Fighter {
         return {
             x: (this.#loc.x | 0),
             y: (this.#loc.y | 0),
-            vx: (this.#vel.x.toFixed(2)),
+            vx: Number(this.#vel.x.toFixed(2)),
             vy: Number(this.#vel.y.toFixed(2)),
         };
     }
