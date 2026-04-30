@@ -35,6 +35,11 @@ export class Menu {
     #inputString = "";
     #isInputActive = false;
 
+    static defaultFadeTimer = .1;
+    #fadeAlpha = 1;
+    fadeTimer = 0;
+    fadeDirection = 0; // 1 = fade to, -1 = fade from, 0 = none
+
     constructor(engine) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
@@ -95,6 +100,11 @@ export class Menu {
     #isJustPressed(code) { return this.#keys[code] && !this.#lastKeys[code]; }
 
     Tick(deltaTime) {
+        if (this.fadeTimer > 0) {
+            this.fadeTimer -= deltaTime;
+            if (this.fadeTimer < 0) this.fadeTimer = 0;
+        }
+
         if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
 
         if (this.#isJustPressed("ArrowUp")) {
@@ -184,17 +194,27 @@ export class Menu {
                 this.Back();
                 break;
             case "QUIT":
-                this.#engine.SetGameState(0);
+                this.StartGame(-1, 0);
                 break;
         }
     }
 
     Draw(ctx) {
+        if (this.fadeTimer > 0) {
+            let t = 1 - (this.fadeTimer / Menu.defaultFadeTimer);
+
+            this.#fadeAlpha = (this.fadeDirection === -1) ? t : 1 - t;
+        } else {
+            this.#fadeAlpha = (this.fadeDirection === -1 || this.fadeDirection === 0) ? 1 : 0;
+        }
+
+        ctx.globalAlpha = this.#fadeAlpha;
+
         ctx.fillStyle = "#00000055";
         ctx.fillRect(0, 0, this.#engine.canvas.width, this.#engine.canvas.height);
 
-        if (this.#engine.gameState === "MENU") this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, "#e66257", "#331505");
-        if (this.#engine.gameState === "PAUSED") this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, "#feffff", "#545454");
+        if (this.#engine.gameState === "MENU") this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
+        if (this.#engine.gameState === "PAUSED") this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
 
         this.#options.forEach((text, i) => {
             const isSelected = i === this.#selectedIndex;
@@ -221,6 +241,8 @@ export class Menu {
 
             this.#engine.DrawPixelText(ctx, displayText, this.#optionsXpos, yPos, Menu.optionsSize, isSelected ? "#ffffff" : "#666666", "#00000000");
         });
+
+        ctx.globalAlpha = 1;
     }
 
     Reset() {
@@ -263,15 +285,15 @@ export class Menu {
         this.ToMenu(i);
     }
 
-    async StartGame(mode) {
+    async StartGame(mode, state = 2) {
         this.#canSelect = false;
         this.#engine.canvas.style.cursor = "none";
 
         await FighterEngine.wait(400);
-        this.#engine.FadeTo("#000", 500);
+        this.#engine.Fade("#000", 500);
         await FighterEngine.wait(1200);
-        this.#engine.SetGameState(2, mode);
+        this.#engine.SetGameState(state, mode);
 
-        this.#engine.FadeFrom("#000", 500);
+        this.#engine.Fade("#000", 500, -1);
     }
 }

@@ -469,6 +469,9 @@ export class FighterEngine {
                 break;
             case 6:
             case "PAUSED":
+                this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
+                this.#mainMenu.fadeDirection = -1;
+
                 this.#prevGameState = this.#gameState;
                 this.#gameState = "PAUSED";
                 this.#mainMenu.Reset();
@@ -570,12 +573,12 @@ export class FighterEngine {
         this.#timeScale = 0.1;
 
         await FighterEngine.wait(400);
-        this.FadeTo("#000", 500);
+        this.Fade("#000", 500);
         await FighterEngine.wait(1200);
         this.SetGameState(2);
 
         this.#timeScale = 1;
-        this.FadeFrom("#000", 500);
+        this.Fade("#000", 500, -1);
     }
 
     async GameOver() {
@@ -583,15 +586,18 @@ export class FighterEngine {
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
 
         await FighterEngine.wait(5000);
-        this.FadeTo("#000", 500);
+        this.Fade("#000", 500);
         await FighterEngine.wait(1200);
         this.SetGameState(0);
         if (this.isOnline) this.Disconnect();
 
-        this.FadeFrom("#000", 500);
+        this.Fade("#000", 500, -1);
     }
 
-    Resume() {
+    async Resume() {
+        this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
+        this.#mainMenu.fadeDirection = 1;
+        await FighterEngine.wait(Menu.defaultFadeTimer * 1000);
         this.SetGameState(this.#prevGameState);
     }
 
@@ -773,22 +779,13 @@ export class FighterEngine {
         this.#shakeTimer = this.#shakeDuration;
     }
 
-    FadeTo(color = "#000", duration = 500) {
+    Fade(color = "#000", duration = 500, direction = 1) {
         this.#fadeColor = color;
         this.#fadeDuration = duration / 1000;
         this.#fadeTimer = 0;
-        this.#fadeDirection = 1;
+        this.#fadeDirection = direction;
         this.#fadeAlpha = 0;
     }
-
-    FadeFrom(color = "#000", duration = 500) {
-        this.#fadeColor = color;
-        this.#fadeDuration = duration / 1000;
-        this.#fadeTimer = 0;
-        this.#fadeDirection = -1;
-        this.#fadeAlpha = 1;
-    }
-
 
     static extractChannelMask(image, channel = "r") {
         const canvas = document.createElement("canvas");

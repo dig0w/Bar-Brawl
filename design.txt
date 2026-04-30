@@ -104,6 +104,8 @@ To do:
         [x] Main menu
         [ ] Logo
         [x] Pause menu
+            [x] Fade in on pause
+            [x] Fade out on resume
     [ ] Gamemodes
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)
