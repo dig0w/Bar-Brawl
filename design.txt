@@ -103,13 +103,19 @@ To do:
         [x] Game over
         [x] Main menu
         [ ] Logo
-        [ ] Pause menu
+        [x] Pause menu
     [ ] Gamemodes
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)
         [x] Online (peer-to-peer)   (Versus -> Online)
     [ ] AI
+        [ ] Attack state (it should rush the opponent and punch)
+        [ ] Defend state (it should back off and block if opponent attacking)
+        [ ] Dribble state (it should try to dribble the opponent in order to get a better position for an attack)
     [x] Multiplayer
         [x] Send game state with delta compression
         [x] Prefeer attacker over defender
-        [x] Host manages health and score
+        [x] Host manages health
+        [x] Host manages round over
+        [ ] Manage pause menu
+        [ ] Remove delta compression and use bytes instead of jsons

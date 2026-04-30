@@ -8,8 +8,9 @@ export class Controller {
     #remote = false;
 
     #keys = {};
-    #jumpReleased = false;
-    #punchReleased = false;
+    #jumpReleased = true;
+    #punchReleased = true;
+    #pauseReleased = true;
 
     inputs = {
         "MoveLeft": false,
@@ -17,6 +18,7 @@ export class Controller {
         "Jump": false,
         "Punch": false,
         "Block": false,
+        "Pause": false
     };
 
     #networkLatch = 0;
@@ -67,6 +69,8 @@ export class Controller {
                     this.inputs.Block = this.#keys["KeyT"] || this.#keys["KeyL"];
                     break;
             }
+
+            this.inputs.Pause = this.#keys["Escape"];
         }
 
         let moveDir = 0;
@@ -92,14 +96,22 @@ export class Controller {
 
         if (this.inputs.Punch) this.#networkLatch |= 1;
         if (this.inputs.Block) this.#networkLatch |= 2;
+
+        if (this.inputs.Pause && this.#pauseReleased) {
+            this.#pauseReleased = false;
+            this.#engine.SetGameState(6);
+        } else if (!this.inputs.Pause) {
+            this.#pauseReleased = true;
+        }
     }
 
     Draw(ctx) { }
 
     Reset() {
         this.#keys = {};
-        this.#jumpReleased = false;
-        this.#punchReleased = false;
+        this.#jumpReleased = true;
+        this.#punchReleased = true;
+        this.#pauseReleased = true;
 
         this.#pawn.moveInput = 0;
     }

@@ -26,11 +26,13 @@ export class FighterEngine {
 
     #gameMode;
     #gameState;
+    #prevGameState;
     static maxRounds = 3;
     #rounds = 0;
     #scoreF0 = 0;
     #scoreF1 = 0;
 
+    static serverURL = "http://localhost:3000";
     #sessionCode;
     #socket;
     #peer;
@@ -101,7 +103,8 @@ export class FighterEngine {
     get canvasSize() { return this.#canvasSize; }
     get canvas() { return this.#canvas; }
 
-    get isOnline() { return (this.#gameMode === "VERSUS_HOST" || this.#gameMode === "VERSUS_CLIENT") }
+    get isHost() { return this.#gameMode === "VERSUS_HOST" }
+    get isOnline() { return (this.isHost || this.#gameMode === "VERSUS_CLIENT") }
 
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
@@ -144,18 +147,22 @@ export class FighterEngine {
         }
 
         this.SetGameState(0);
+
+        window.onbeforeunload = () => {
+            this.Disconnect();
+        };
     }
 
     Tick(deltaTime) {
-        if (this.#timeScaleTimer >= 0) {
+        if (this.#timeScaleTimer >= 0 && this.#timeScaleTimer != undefined) {
             this.#timeScaleTimer -= deltaTime;
             if (this.#timeScaleTimer <= 0) {
                 this.#timeScale = 1;
             }
         }
-        const activeDeltaTime = deltaTime * this.#timeScale;
+        const activeDeltaTime = deltaTime * (this.#gameState === "PAUSED" ? 0 : this.#timeScale);
 
-        if (this.#gameState === "MENU") {
+        if (this.#gameState === "MENU" || this.#gameState === "PAUSED") {
             this.#mainMenu.Tick(deltaTime);
         }
 
@@ -163,7 +170,7 @@ export class FighterEngine {
         if (this.isOnline && this.#networkAccumulator >= FighterEngine.networkTickRate) {
             this.#currentFrame = (this.#currentFrame + 1) % 256;
 
-            const isHost = this.#gameMode === "VERSUS_HOST";
+            const isHost = this.isHost;
 
             if (this.#peer && this.#peer.connected) {
                 const myFighter = isHost ? this.#fighter0 : this.#fighter1;
@@ -340,10 +347,6 @@ export class FighterEngine {
         this.#ctx.restore();
         this.#ctx.save();
 
-        if (this.#gameState === "MENU") {
-            this.#mainMenu.Draw(this.#ctx);
-        }
-
         if (this.#gameState === "GAME_OVER") {
             let fontSize = FighterEngine.uiRoundSize;
             if (this.#uiGameOverTimer > 0) {
@@ -398,6 +401,10 @@ export class FighterEngine {
             }
 
             this.DrawPixelText(this.#ctx, this.#uiWinnerText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiWinnerFillColor, FighterEngine.uiWinnerOutlineColor);
+        }
+
+        if (this.#gameState === "MENU" || this.#gameState === "PAUSED") {
+            this.#mainMenu.Draw(this.#ctx);
         }
 
         if (this.#fadeAlpha > 0) {
@@ -462,7 +469,10 @@ export class FighterEngine {
                 break;
             case 6:
             case "PAUSED":
+                this.#prevGameState = this.#gameState;
                 this.#gameState = "PAUSED";
+                this.#mainMenu.Reset();
+                this.#mainMenu.ToMenu(6);
                 break;
         }
 
@@ -544,7 +554,7 @@ export class FighterEngine {
         this.SetGameState(4);
         this.#uiRoundText = ``;
 
-        if (this.isOnline) this.#roundOverTrigger = loser == this.#fighter0 ? 1 : 2;
+        if (this.isHost) this.#roundOverTrigger = loser == this.#fighter0 ? 1 : 2;
 
         await FighterEngine.wait(50);
 
@@ -581,14 +591,24 @@ export class FighterEngine {
         this.FadeFrom("#000", 500);
     }
 
+    Resume() {
+        this.SetGameState(this.#prevGameState);
+    }
+
 
     get sessionCode() { return this.#sessionCode; }
 
     #connectSignaling(callback) {
         if (this.#socket) return;
-        this.#socket = io("http://localhost:3000");
+        this.#socket = io(FighterEngine.serverURL);
 
         this.#socket.on("connect", callback);
+
+        this.#socket.on("signal", data => {
+            if (this.#peer && !this.#peer.destroyed) {
+                this.#peer.signal(data.signal);
+            }
+        });
 
         this.#socket.on("disconnect", () => {
             if (!this.#peer?.connected) this.Disconnect();
@@ -642,8 +662,7 @@ export class FighterEngine {
         this.#socket.on("session-created", code => this.#sessionCode = code);
 
         this.#socket.on("player-joined", playerId => {
-            const p = this.#initPeer(true, playerId, 2);
-            this.#socket.on("signal", data => p.signal(data.signal));
+            this.#initPeer(true, playerId, 2);
         });
     }
 
@@ -651,7 +670,7 @@ export class FighterEngine {
         if (!code) return;
         this.#connectSignaling(() => this.#socket.emit("join-session", code));
 
-        this.#socket.on("signal", data => {
+        this.#socket.once("signal", data => {
             if (!this.#peer) {
                 const p = this.#initPeer(false, data.from, 3);
                 p.signal(data.signal);
@@ -668,33 +687,14 @@ export class FighterEngine {
         }
 
         if (this.#socket) {
+            this.#socket.off("signal");
+            this.#socket.off("player-joined");
             this.#socket.disconnect();
             this.#socket = null;
         }
 
         this.#sessionCode = null;
         this.SetGameState(0);
-    }
-
-    #getDelta(fighter) {
-        const currentState = fighter.GetNetworkState();
-        const delta = {};
-        let changed = false;
-
-        if (!this.#lastSentState) {
-            this.#lastSentState = currentState;
-            return currentState;
-        }
-
-        for (let key in currentState) {
-            if (currentState[key] !== this.#lastSentState[key]) {
-                delta[key] = currentState[key];
-                this.#lastSentState[key] = currentState[key];
-                changed = true;
-            }
-        }
-
-        return changed ? delta : null;
     }
 
 

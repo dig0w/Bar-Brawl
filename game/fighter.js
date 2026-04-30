@@ -51,7 +51,7 @@ export class Fighter {
 
     static defaultPunchedAnimTimer = 14 / 60;
     #punchedAnimTimer = 0;
-    static defaultPunchedCooldown = 12 / 60;
+    static defaultPunchedCooldown = 22 / 60;
     #punchedCooldown = 0;
 
     static defaultDieAnimTimer = 10 / 60;
@@ -88,6 +88,7 @@ export class Fighter {
     // static hitboxesDamage = [200, 200, 200, 200, 200, 200];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
+    #isDead = false;
     static defaultGhostTimer = 4 / 60;
     #ghostHealth = 100;
     #ghostTimer = 0;
@@ -455,7 +456,7 @@ export class Fighter {
     }
 
     DrawUI(ctx) {
-        if (this.#engine.gameState != "PRE_ROUND" && this.#engine.gameState != "FIGHTING" && this.#engine.gameState != "POS_ROUND") return;
+        if (this.#engine.gameState != "PRE_ROUND" && this.#engine.gameState != "FIGHTING" && this.#engine.gameState != "POS_ROUND" && this.#engine.gameState != "PAUSED") return;
 
         const isVariantZero = this.#variant == 0;
 
@@ -598,9 +599,10 @@ export class Fighter {
         this.#bloodLoc.y = hitPoint.y;
 
         let intensity = 1;
-        if (this.#health <= 0) {
+        if (this.#health <= 0 && !this.#isDead) {
             this.#health = 0;
             this.Die();
+            this.#isDead = true;
             intensity = 3;
         }
 
@@ -644,8 +646,10 @@ export class Fighter {
         this.#facingRight = this.#variant == 0;
 
         this.#health = Fighter.maxHealth;
+        this.#isDead = false;
         this.#ghostHealth = this.#health;
 
+        this.moveInput = 0;
         this.#punchAnimState = -1;
         this.#blockAnimState = -1;
         this.#celebrating = false;
@@ -677,7 +681,7 @@ export class Fighter {
     }
 
     SetHitReport(hitboxIndex, hitPoint, hitSpeed) {
-        this.#networkHitReport = { i: hitboxIndex, p: hitPoint, s: hitSpeed };
+        this.#networkHitReport = { i: hitboxIndex, p: { x: (hitPoint.x | 0), y: (hitPoint | 0)}, s: Number(hitSpeed.toFixed(2)) };
     }
 
 

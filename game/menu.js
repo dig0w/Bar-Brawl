@@ -16,6 +16,7 @@ export class Menu {
         ["cCODE", "BACK"],
         ["iCODE", "BACK"],
         ["AAA", "BBB", "CCC", "BACK"],
+        ["RESUME", "OPTIONS", "QUIT"],
     ];
     #menuIndex = 0;
     #options = ["START", "VERSUS", "OPTIONS"];
@@ -94,7 +95,7 @@ export class Menu {
     #isJustPressed(code) { return this.#keys[code] && !this.#lastKeys[code]; }
 
     Tick(deltaTime) {
-        if (this.#engine.gameState !== "MENU" || !this.#canSelect) return;
+        if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
 
         if (this.#isJustPressed("ArrowUp")) {
             this.#selectedIndex = (this.#selectedIndex - 1 + this.#options.length) % this.#options.length;
@@ -109,7 +110,7 @@ export class Menu {
         }
 
         if (this.#isJustPressed("Escape")) {
-            this.ToMenu(0);
+            this.Back();
         }
 
         this.#lastKeys = { ...this.#keys };
@@ -138,7 +139,7 @@ export class Menu {
     }
 
     #handleSelection() {
-        if (this.#engine.gameState !== "MENU" || !this.#canSelect) return;
+        if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
 
         const choice = this.#options[this.#selectedIndex];
 
@@ -179,22 +180,11 @@ export class Menu {
                 }
                 break;
             case "BACK":
-                let i;
-                switch (this.#menuIndex) {
-                    case 2:
-                        i = 1;
-                        break;
-                    case 3:
-                    case 4:
-                        i = 2;
-                        this.#engine.Disconnect();
-                        break;
-                    default:
-                        i = 0;
-                        break;
-                }
-
-                this.ToMenu(i);
+                case "RESUME":
+                this.Back();
+                break;
+            case "QUIT":
+                this.#engine.SetGameState(0);
                 break;
         }
     }
@@ -203,7 +193,8 @@ export class Menu {
         ctx.fillStyle = "#00000055";
         ctx.fillRect(0, 0, this.#engine.canvas.width, this.#engine.canvas.height);
 
-        this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, "#e66257", "#331505");
+        if (this.#engine.gameState === "MENU") this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, "#e66257", "#331505");
+        if (this.#engine.gameState === "PAUSED") this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, "#feffff", "#545454");
 
         this.#options.forEach((text, i) => {
             const isSelected = i === this.#selectedIndex;
@@ -246,6 +237,30 @@ export class Menu {
         this.#menuIndex = i;
         this.#selectedIndex = 0;
         this.#options = Menu.menusOptions[this.#menuIndex];
+    }
+
+    Back() {
+        let i;
+        switch (this.#menuIndex) {
+            case 2:
+                i = 1;
+                break;
+            case 3:
+            case 4:
+                i = 2;
+                this.#engine.Disconnect();
+                break;
+            case 6:
+                this.#engine.Resume();
+                return;
+                break;
+            default:
+                if (this.#engine.gameState === "PAUSED") i = 6;
+                else i = 0;
+                break;
+        }
+
+        this.ToMenu(i);
     }
 
     async StartGame(mode) {

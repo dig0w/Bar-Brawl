@@ -29,6 +29,8 @@ export class AIController {
         } else {
             this.#pawn.SetBlocking(false);
         }
+
+        this.#pawn.moveInput = -1;
     }
 
     Draw(ctx) { }
