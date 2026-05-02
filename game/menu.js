@@ -190,7 +190,7 @@ export class Menu {
                 }
                 break;
             case "BACK":
-                case "RESUME":
+            case "RESUME":
                 this.Back();
                 break;
             case "QUIT":
@@ -214,7 +214,7 @@ export class Menu {
         ctx.fillRect(0, 0, this.#engine.canvas.width, this.#engine.canvas.height);
 
         if (this.#engine.gameState === "MENU") this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
-        if (this.#engine.gameState === "PAUSED") this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
+        if (this.#engine.gameState === "PAUSED" && !this.#engine.isOnline) this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
 
         this.#options.forEach((text, i) => {
             const isSelected = i === this.#selectedIndex;
@@ -273,6 +273,7 @@ export class Menu {
                 this.#engine.Disconnect();
                 break;
             case 6:
+                this.#canSelect = false;
                 this.#engine.Resume();
                 return;
                 break;
@@ -287,7 +288,6 @@ export class Menu {
 
     async StartGame(mode, state = 2) {
         this.#canSelect = false;
-        this.#engine.canvas.style.cursor = "none";
 
         await FighterEngine.wait(400);
         this.#engine.Fade("#000", 500);

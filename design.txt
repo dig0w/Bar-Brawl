@@ -119,5 +119,5 @@ To do:
         [x] Prefeer attacker over defender
         [x] Host manages health
         [x] Host manages round over
-        [ ] Manage pause menu
+        [x] Manage pause menu
         [ ] Remove delta compression and use bytes instead of jsons

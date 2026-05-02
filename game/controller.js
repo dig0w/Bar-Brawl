@@ -36,6 +36,8 @@ export class Controller {
         this.#remote = remote;
     }
 
+    get pawn() { return this.#pawn }
+
     Begin() {
         if (this.#remote) return;
         window.addEventListener("keydown", (e) => this.#keys[e.code] = true);
@@ -43,7 +45,7 @@ export class Controller {
     }
 
     Tick(deltaTime) {
-        if (this.#engine.gameState !== "FIGHTING") return;
+        if (!(this.#engine.gameState === "FIGHTING" || (this.#engine.gameState === "PAUSED" && this.#engine.isOnline && this.#remote))) return;
 
         if (!this.#remote) {
             switch (this.#variant) {

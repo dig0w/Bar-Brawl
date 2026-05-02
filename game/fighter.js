@@ -246,7 +246,7 @@ export class Fighter {
                 }
             }
 
-            if (!this.#punchHasHit) {
+            if (!this.#punchHasHit && (this.#engine.isOnline ? this.#engine.isFighterLocal(this) : true)) {
                 this.#punchTimer += deltaTime;
                 if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
                     const percent = (this.#punchTimer - this.#startPunchTrace) / (this.#endPunchTrace - this.#startPunchTrace);
@@ -267,7 +267,7 @@ export class Fighter {
                         if (intersected) {
                             this.#punchHasHit = true;
 
-                            opponent.TakeDamage(i, hitPoint, this.#vel.x);
+                            opponent.TakeDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0)}, Number(this.#vel.x.toFixed(2)));
                             break;
                         }
                     }
@@ -681,7 +681,7 @@ export class Fighter {
     }
 
     SetHitReport(hitboxIndex, hitPoint, hitSpeed) {
-        this.#networkHitReport = { i: hitboxIndex, p: { x: (hitPoint.x | 0), y: (hitPoint | 0)}, s: Number(hitSpeed.toFixed(2)) };
+        this.#networkHitReport = { i: hitboxIndex, p: { x: (hitPoint.x | 0), y: (hitPoint.y | 0)}, s: Number(hitSpeed.toFixed(2)) };
     }
 
 

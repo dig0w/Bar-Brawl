@@ -105,10 +105,11 @@ export class FighterEngine {
 
     get isHost() { return this.#gameMode === "VERSUS_HOST" }
     get isOnline() { return (this.isHost || this.#gameMode === "VERSUS_CLIENT") }
+    isFighterLocal(fighter)  { return this.#ctrl0.pawn === fighter }
 
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
-    getOpponent(fighter) { return (this.fighter0 === fighter) ? this.fighter1 : this.fighter0 }
+    getOpponent(fighter) { return this.fighter0 === fighter ? this.fighter1 : this.fighter0 }
 
     getScore(fighter) { return fighter == this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
 
@@ -160,7 +161,7 @@ export class FighterEngine {
                 this.#timeScale = 1;
             }
         }
-        const activeDeltaTime = deltaTime * (this.#gameState === "PAUSED" ? 0 : this.#timeScale);
+        const activeDeltaTime = deltaTime * (this.#gameState === "PAUSED" && !this.isOnline ? 0 : this.#timeScale);
 
         if (this.#gameState === "MENU" || this.#gameState === "PAUSED") {
             this.#mainMenu.Tick(deltaTime);
@@ -171,10 +172,10 @@ export class FighterEngine {
             this.#currentFrame = (this.#currentFrame + 1) % 256;
 
             const isHost = this.isHost;
+            const myFighter = isHost ? this.#fighter0 : this.#fighter1;
+            const theirFighter = isHost ? this.#fighter1 : this.#fighter0;
 
             if (this.#peer && this.#peer.connected) {
-                const myFighter = isHost ? this.#fighter0 : this.#fighter1;
-
                 const currentState = myFighter.GetNetworkState();
                 const delta = { f: this.#currentFrame };
                 let hasChanges = false;
@@ -189,7 +190,7 @@ export class FighterEngine {
 
                 delta["c"] = this.#ctrl0.GetInputMask();
 
-                const hit = myFighter.GetHitReport();
+                const hit = theirFighter.GetHitReport();
                 if (hit) delta["h"] = hit;
 
                 if (isHost) {
@@ -207,9 +208,8 @@ export class FighterEngine {
 
             if (this.#remoteStateBuffer) {
                 const data = this.#remoteStateBuffer;
-                const theirFighter = isHost ? this.#fighter1 : this.#fighter0;
 
-                if (isHost && data.h) theirFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
+                if (data.h) myFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
 
                 if (!isHost) {
                     if (data.hp0 !== undefined) this.#fighter0.SetNetworkState({ hp: data.hp0 });
@@ -435,6 +435,8 @@ export class FighterEngine {
                 this.#gameState = "MENU";
                 mode = -1;
 
+                if (this.#peer || this.#socket) this.Disconnect();
+
                 this.#mainMenu.Reset();
                 this.#fighter0.Reset();
                 this.#fighter1.Reset();
@@ -449,23 +451,33 @@ export class FighterEngine {
             case "INTRO":
                 this.#gameState = "INTRO";
                 mode = 0;
+
+                this.#canvas.style.cursor = "none";
                 break;
             case 2:
             case "PRE_ROUND":
                 this.#gameState = "PRE_ROUND";
                 this.StartRound();
+
+                this.#canvas.style.cursor = "none";
                 break;
             case 3:
             case "FIGHTING":
                 this.#gameState = "FIGHTING";
+
+                this.#canvas.style.cursor = "none";
                 break;
             case 4:
             case "POS_ROUND":
                 this.#gameState = "POS_ROUND";
+
+                this.#canvas.style.cursor = "none";
                 break;
             case 5:
             case "GAME_OVER":
                 this.#gameState = "GAME_OVER";
+
+                this.#canvas.style.cursor = "none";
                 break;
             case 6:
             case "PAUSED":
