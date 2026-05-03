@@ -216,7 +216,7 @@ export class FighterEngine {
                 const data = this.#remoteStateBuffer;
 
                 // if (data.h) myFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
-                if (data.hi) myFighter.TakeDamage(data.hi, { x: data.hx, y: data.hy }, data.hs);
+                if (data.hi || data.hx || data.hy || data.hs) myFighter.TakeDamage(data.hi, { x: data.hx, y: data.hy }, data.hs);
 
                 if (!isHost) {
                     if (data.hp0 !== undefined) this.#fighter0.SetNetworkState({ hp: data.hp0 });
