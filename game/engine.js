@@ -191,7 +191,13 @@ export class FighterEngine {
                 delta["c"] = this.#ctrl0.GetInputMask();
 
                 const hit = theirFighter.GetHitReport();
-                if (hit) delta["h"] = hit;
+                // if (hit) delta["h"] = hit;
+                if (hit) {
+                    delta["hi"] = hit.i;
+                    delta["hx"] = hit.p.x;
+                    delta["hy"] = hit.p.y;
+                    delta["hs"] = hit.s;
+                }
 
                 if (isHost) {
                     delta["hp0"] = (this.#fighter0.health | 0);
@@ -209,7 +215,8 @@ export class FighterEngine {
             if (this.#remoteStateBuffer) {
                 const data = this.#remoteStateBuffer;
 
-                if (data.h) myFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
+                // if (data.h) myFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
+                if (data.hi) myFighter.TakeDamage(data.hi, { x: data.hx, y: data.hy }, data.hs);
 
                 if (!isHost) {
                     if (data.hp0 !== undefined) this.#fighter0.SetNetworkState({ hp: data.hp0 });
@@ -658,7 +665,8 @@ export class FighterEngine {
                 this.#lastReceivedFrame = newF;
                 this.#remoteStateBuffer = data;
 
-                console.log("data p", data);
+                console.log("data p: ", data);
+                console.log("size (B): ", rawData.byteLength || rawData.length);
             } catch (e) {
                 console.error("Failed to parse network packet", e);
             }
