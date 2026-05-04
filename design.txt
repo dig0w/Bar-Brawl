@@ -120,35 +120,44 @@ To do:
         [x] Host manages health
         [x] Host manages round over
         [x] Manage pause menu
-        [ ] Remove delta compression and use bytes instead of jsons
+        [x] Remove delta compression and use bytes instead of jsons
 
 Issue:
     Client doesnt animation every time it gets punched
 
 Network Packet JSON:
     {
+        f: Number (int to 256),
         x: Number (int),
         y: Number (int),
         vx: Number (2 decimal),
         vy: Number (2 decimal),
         c: 2 bit mask,
-        hit: { i: Number (int), p: { x: Number (int), y: Number (int) }, s: Number (2 decimal) },
         hp0: Number (int),
         hp1: Number (int),
         ro: 2 bit mask
+        hit: { i: Number (int), p: { x: Number (int), y: Number (int) }, s: Number (2 decimal) },
     }
+    110 Bytes
 
     {
+        f: Number (int to 256),
         x: Number (int),
         y: Number (int),
         vx: Number (2 decimal),
         vy: Number (2 decimal),
         c: 2 bit mask,
+        hp0: Number (int),
+        hp1: Number (int),
+        ro: 2 bit mask
         hi: Number (int),
         hx: Number (int),
         hy: Number (int),
         hs: Number (2 decimal),
-        hp0: Number (int),
-        hp1: Number (int),
-        ro: 2 bit mask
     }
+    102 Bytes
+
+    f (1), x (2), y (2), vx (2), vy (2), c (1), hp0 (1), hp1 (1), ro (1)
+    13 Bytes (10 for Client)
+    f (1), x (2), y (2), vx (2), vy (2), c (1), hp0 (1), hp1 (1), ro (1), hi (1), hx (2), hy (2), hs (2)
+    Max 20 Bytes (17 for Client)

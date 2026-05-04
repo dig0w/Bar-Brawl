@@ -653,6 +653,8 @@ export class Fighter {
         this.#punchAnimState = -1;
         this.#blockAnimState = -1;
         this.#celebrating = false;
+
+        this.GetHitReport();
     }
 
 

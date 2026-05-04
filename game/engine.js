@@ -178,26 +178,14 @@ export class FighterEngine {
             if (this.#peer && this.#peer.connected) {
                 const currentState = myFighter.GetNetworkState();
                 const delta = { f: this.#currentFrame };
-                let hasChanges = false;
 
                 for (let key in currentState) {
                     if (currentState[key] !== this.#lastSentState[key]) {
                         delta[key] = currentState[key];
-                        this.#lastSentState[key] = currentState[key];
-                        hasChanges = true;
                     }
                 }
 
                 delta["c"] = this.#ctrl0.GetInputMask();
-
-                const hit = theirFighter.GetHitReport();
-                // if (hit) delta["h"] = hit;
-                if (hit) {
-                    delta["hi"] = hit.i;
-                    delta["hx"] = hit.p.x;
-                    delta["hy"] = hit.p.y;
-                    delta["hs"] = hit.s;
-                }
 
                 if (isHost) {
                     delta["hp0"] = (this.#fighter0.health | 0);
@@ -209,14 +197,22 @@ export class FighterEngine {
                     }
                 }
 
-                this.#peer.send(JSON.stringify(delta));
+                const hit = theirFighter.GetHitReport();
+                if (hit) {
+                    delta["hi"] = hit.i;
+                    delta["hx"] = hit.p.x;
+                    delta["hy"] = hit.p.y;
+                    delta["hs"] = hit.s;
+                }
+
+                this.#peer.send(this.#Pack(delta));
             }
 
             if (this.#remoteStateBuffer) {
                 const data = this.#remoteStateBuffer;
 
                 // if (data.h) myFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
-                if (data.hi || data.hx || data.hy || data.hs) myFighter.TakeDamage(data.hi, { x: data.hx, y: data.hy }, data.hs);
+                if (data.hi !== undefined || data.hx !== undefined || data.hy !== undefined || data.hs !== undefined) myFighter.TakeDamage(data.hi, { x: data.hx, y: data.hy }, data.hs);
 
                 if (!isHost) {
                     if (data.hp0 !== undefined) this.#fighter0.SetNetworkState({ hp: data.hp0 });
@@ -655,7 +651,7 @@ export class FighterEngine {
 
         p.on("data", rawData => {
             try {
-                const data = JSON.parse(rawData);
+                const data = this.#Unpack(rawData);
 
                 const newF = data.f;
                 const oldF = this.#lastReceivedFrame;
@@ -666,6 +662,7 @@ export class FighterEngine {
                 this.#remoteStateBuffer = data;
 
                 console.log("data p: ", data);
+                console.log("rawdata: ", rawData);
                 console.log("size (B): ", rawData.byteLength || rawData.length);
             } catch (e) {
                 console.error("Failed to parse network packet", e);
@@ -721,6 +718,80 @@ export class FighterEngine {
 
         this.#sessionCode = null;
         this.SetGameState(0);
+    }
+
+    #Pack(data) {
+        let size = 10;
+        let hasHit = false;
+
+        if (this.isHost) {
+            size += 3;
+        }
+        if (data.hi !== undefined || data.hx !== undefined || data.hy !== undefined || data.hs !== undefined) {
+            size += 7;
+            hasHit = true;
+        }
+
+        const buffer = new ArrayBuffer(size);
+        const v = new DataView(buffer);
+        let offset = 0;
+
+        // Frame
+        v.setUint8(offset++, data.f || 0);
+
+        // Movement & Controls
+        v.setInt16(offset, data.x || 0); offset += 2;
+        v.setInt16(offset, data.y || 0); offset += 2;
+        v.setInt16(offset, (data.vx || 0) * 100); offset += 2;
+        v.setInt16(offset, (data.vy || 0) * 100); offset += 2;
+        v.setUint8(offset++, data.c || 0);
+
+        // Health & Round Over
+        if (this.isHost) {
+            v.setUint8(offset++, data.hp0);
+            v.setUint8(offset++, data.hp1);
+            v.setUint8(offset++, data.ro);
+        }
+
+        // Hit
+        if (hasHit) {
+            v.setUint8(offset++, (data.hi || 0));
+            v.setInt16(offset, (data.hx || 0)); offset += 2;
+            v.setInt16(offset, (data.hy || 0)); offset += 2;
+            v.setInt16(offset, (data.hs || 0) * 100); offset += 2;
+        }
+
+        return buffer;
+    }
+
+    #Unpack(rawData) {
+        const buffer = rawData.buffer || rawData; 
+        const v = new DataView(buffer);
+        const len = buffer.byteLength;
+        let offset = 0;
+        const res = {};
+
+        res.f = v.getUint8(offset++);
+        res.x = v.getInt16(offset); offset += 2;
+        res.y = v.getInt16(offset); offset += 2;
+        res.vx = v.getInt16(offset) / 100; offset += 2;
+        res.vy = v.getInt16(offset) / 100; offset += 2;
+        res.c = v.getUint8(offset++);
+
+        if (!this.isHost) {
+            res.hp0 = v.getUint8(offset++);
+            res.hp1 = v.getUint8(offset++);
+            res.ro = v.getUint8(offset++);
+        }
+
+        if (len - offset === 7) {
+            res.hi = v.getUint8(offset++);
+            res.hx = v.getInt16(offset); offset += 2;
+            res.hy = v.getInt16(offset); offset += 2;
+            res.hs = v.getInt16(offset) / 100; offset += 2;
+        }
+
+        return res;
     }
 
 
