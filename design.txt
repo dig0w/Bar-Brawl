@@ -92,6 +92,8 @@ To do:
             [x] On hit spawn blood sprite
             [x] On hit camera shake
         [x] Rounds
+        [ ] Gamepad controls
+        [ ] Shadows under characters
         [ ] Crouch?
         [ ] Kick?
     [ ] UI
@@ -103,6 +105,7 @@ To do:
         [x] Game over
         [x] Main menu
         [ ] Logo
+            [ ] Title
         [x] Pause menu
             [x] Fade in on pause
             [x] Fade out on resume
@@ -123,7 +126,7 @@ To do:
         [x] Remove delta compression and use bytes instead of jsons
 
 Issue:
-    Client doesnt animation every time it gets punched
+    Client (Dogo) had die animation but still alive, after loosing round 1 and punching Host (mewy) hard
 
 Network Packet JSON:
     {
