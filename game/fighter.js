@@ -67,6 +67,10 @@ export class Fighter {
     #bloodAnimState = -1;
     #bloodLoc = { x: 0, y: 0 };
 
+    static shadowSize = { w: 12, h: 2 };
+    static shadowOpacity = 0.2;
+    static shadowJump = 25;
+
     static hitboxesOffset = [
         { x: 15, y: 12 },
         { x: 10, y: 18 },
@@ -327,6 +331,22 @@ export class Fighter {
 
     Draw(ctx) {
         ctx.save();
+
+        // Shadow
+        const y = this.#engine.groundY;
+        const x = this.#loc.x + (this.#size.w / 2) + ((Fighter.shadowSize.w / 2 - 2) * (this.#facingRight ? -1 : 1));
+        const heightFactor = Math.max(0, 1 + ((this.#loc.y - y + 39) / (Fighter.shadowJump * 2)));
+
+        ctx.save();
+        ctx.beginPath();
+
+        ctx.fillStyle = `rgba(0, 0, 0, ${Fighter.shadowOpacity * heightFactor})`;
+
+        ctx.ellipse(x, y - Fighter.shadowSize.h / 2, Fighter.shadowSize.w * heightFactor, Fighter.shadowSize.h * heightFactor, 0, 0, Math.PI * 2);
+        
+        ctx.fill();
+        ctx.restore();
+
 
         if (!this.#facingRight) {
             ctx.translate(this.#loc.x + this.#size.w / 2, 0);

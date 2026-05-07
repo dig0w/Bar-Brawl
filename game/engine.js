@@ -17,6 +17,7 @@ export class FighterEngine {
     #objects = [];
 
     #backgroundImage = Object.assign(new Image(), { src: "assets/bar.png" });
+    #foregroundImage = Object.assign(new Image(), { src: "assets/bar_foreground.png" });
 
     #mainMenu = null;
     #fighter0 = null;
@@ -147,7 +148,8 @@ export class FighterEngine {
             this.#greenFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "g");
         }
 
-        this.SetGameState(0);
+        // this.SetGameState(0);
+        this.SetGameState(2, 0);
 
         window.onbeforeunload = () => {
             this.Disconnect();
@@ -342,6 +344,10 @@ export class FighterEngine {
         }
 
         this.#ctx.restore();
+
+        if (this.#gameState !== "GAME_OVER" && this.#foregroundImage && this.#foregroundImage.complete) {
+            this.#ctx.drawImage(this.#foregroundImage, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
+        }
 
         for (let i = 0; i < this.#objects.length; i++) {
             if (this.#objects[i].DrawUI) this.#objects[i].DrawUI(this.#ctx);

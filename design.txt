@@ -61,9 +61,11 @@ To do:
         [ ] Bottle thrown and broken
         [ ] Fade to black
     [ ] Bar Scene
-        [ ] Bar at round 1
+        [-] Bar at round 1 (add waiter, cups on the counter, and a bottle of whiskey)
         [ ] Bar at round 2
         [ ] Bar at round 3
+    [ ] Cinematic Outro
+        [ ] Save local var that confirms the game was completed (after should, based on this var, use bar scene at round 3)
     [x] Bald Character
         [x] Idling
         [x] Walking
@@ -92,8 +94,8 @@ To do:
             [x] On hit spawn blood sprite
             [x] On hit camera shake
         [x] Rounds
+        [x] Shadows under characters
         [ ] Gamepad controls
-        [ ] Shadows under characters
         [ ] Crouch?
         [ ] Kick?
     [ ] UI
