@@ -9,6 +9,11 @@ export class Menu {
     #mouse = { x: 0, y: 0 };
     #mouseHovering = false;
 
+    #gamepadKeys = {};
+    #lastGamepadBtns = {};
+    #stickThreshold = 0.5;
+    #cooldown = 0;
+
     static menusOptions = [
         ["START", "VERSUS", "OPTIONS"],
         ["LOCAL", "ONLINE", "BACK"],
@@ -97,7 +102,32 @@ export class Menu {
         });
     }
 
-    #isJustPressed(code) { return this.#keys[code] && !this.#lastKeys[code]; }
+    #isPressed(keyCode, gpBtn) { return (this.#keys[keyCode] && !this.#lastKeys[keyCode]) || (this.#gamepadKeys[gpBtn] && !this.#lastGamepadBtns[gpBtn]); }
+
+    #pollGamepad() {
+        const gp = navigator.getGamepads()[0];
+        if (!gp) return;
+
+        this.#gamepadKeys = {};
+
+        if (gp.buttons[12].pressed) this.#gamepadKeys["UP"] = true;
+        if (gp.buttons[13].pressed) this.#gamepadKeys["DOWN"] = true;
+        if (gp.buttons[0].pressed) this.#gamepadKeys["CONFIRM"] = true;
+        if (gp.buttons[1].pressed) this.#gamepadKeys["BACK"] = true;
+        if (gp.buttons[9].pressed) this.#gamepadKeys["BACK"] = true;
+
+        if (this.#cooldown <= 0) {
+            if (gp.axes[1] < -this.#stickThreshold) {
+                this.#gamepadKeys["UP"] = true;
+                this.#cooldown = 0.2;
+            } else if (gp.axes[1] > this.#stickThreshold) {
+                this.#gamepadKeys["DOWN"] = true;
+                this.#cooldown = 0.2;
+            }
+        } else {
+            this.#cooldown -= 0.016;
+        }
+    }
 
     Tick(deltaTime) {
         if (this.fadeTimer > 0) {
@@ -107,23 +137,26 @@ export class Menu {
 
         if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
 
-        if (this.#isJustPressed("ArrowUp")) {
+        this.#pollGamepad();
+
+        if (this.#isPressed("ArrowUp", "UP")) {
             this.#selectedIndex = (this.#selectedIndex - 1 + this.#options.length) % this.#options.length;
         }
 
-        if (this.#isJustPressed("ArrowDown")) {
+        if (this.#isPressed("ArrowDown", "DOWN")) {
             this.#selectedIndex = (this.#selectedIndex + 1) % this.#options.length;
         }
 
-        if (this.#isJustPressed("Enter") || this.#isJustPressed("Space")) {
+        if (this.#isPressed("Enter", "CONFIRM") || this.#isPressed("Space", "CONFIRM")) {
             this.#handleSelection();
         }
 
-        if (this.#isJustPressed("Escape")) {
+        if (this.#isPressed("Escape", "BACK")) {
             this.Back();
         }
 
         this.#lastKeys = { ...this.#keys };
+        this.#lastGamepadBtns = { ...this.#gamepadKeys };
 
         this.#mouseHovering = false;
         this.#options.forEach((text, i) => {

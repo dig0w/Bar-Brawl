@@ -50,6 +50,7 @@ Stage 3: Recovering
 During these stages the fighter can not throw a Jab.
 By combining a Block with Crouch, defends a low punch.
 
+
 To do:
     [ ] Cinematic Intro
         [ ] Bottle on counter
@@ -61,7 +62,7 @@ To do:
         [ ] Bottle thrown and broken
         [ ] Fade to black
     [ ] Bar Scene
-        [-] Bar at round 1 (add waiter, cups on the counter, and a bottle of whiskey)
+        [-] Bar at round 1 (add high chairs, waiter, cups on the counter, and a bottle of whiskey)
         [ ] Bar at round 2
         [ ] Bar at round 3
     [ ] Cinematic Outro
@@ -95,7 +96,7 @@ To do:
             [x] On hit camera shake
         [x] Rounds
         [x] Shadows under characters
-        [ ] Gamepad controls
+        [-] Gamepad controls (test with 2 controllers or more)
         [ ] Crouch?
         [ ] Kick?
     [ ] UI
@@ -127,8 +128,10 @@ To do:
         [x] Manage pause menu
         [x] Remove delta compression and use bytes instead of jsons
 
+
 Issue:
     Client (Dogo) had die animation but still alive, after loosing round 1 and punching Host (mewy) hard
+
 
 Network Packet JSON:
     {

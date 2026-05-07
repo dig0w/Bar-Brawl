@@ -148,8 +148,8 @@ export class FighterEngine {
             this.#greenFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "g");
         }
 
-        // this.SetGameState(0);
-        this.SetGameState(2, 0);
+        this.SetGameState(0);
+        // this.SetGameState(2, 0);
 
         window.onbeforeunload = () => {
             this.Disconnect();
@@ -509,7 +509,7 @@ export class FighterEngine {
                 case "CAREER":
                     this.#gameMode = "CAREER";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 2);
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
                     this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new AIController(this, this.#fighter1);
                     this.#objects.push(this.#ctrl1);
@@ -518,27 +518,27 @@ export class FighterEngine {
                 case "VERSUS_LOCAL":
                     this.#gameMode = "VERSUS_LOCAL";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 0);
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 0, 0);
                     this.#objects.push(this.#ctrl0);
-                    this.#ctrl1 = new Controller(this, this.#fighter1, 1);
+                    this.#ctrl1 = new Controller(this, this.#fighter1, 1, 1);
                     this.#objects.push(this.#ctrl1);
                     break;
                 case 2:
                 case "VERSUS_HOST":
                     this.#gameMode = "VERSUS_HOST";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 2);
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
                     this.#objects.push(this.#ctrl0);
-                    this.#ctrl1 = new Controller(this, this.#fighter1, 0, true);
+                    this.#ctrl1 = new Controller(this, this.#fighter1, 0, 1, true);
                     this.#objects.push(this.#ctrl1);
                     break;
                 case 3:
                 case "VERSUS_CLIENT":
                     this.#gameMode = "VERSUS_CLIENT";
 
-                    this.#ctrl0 = new Controller(this, this.#fighter1, 2);
+                    this.#ctrl0 = new Controller(this, this.#fighter1, 2, 0);
                     this.#objects.push(this.#ctrl0);
-                    this.#ctrl1 = new Controller(this, this.#fighter0, 0, true);
+                    this.#ctrl1 = new Controller(this, this.#fighter0, 0, 1, true);
                     this.#objects.push(this.#ctrl1);
                     break;
             }

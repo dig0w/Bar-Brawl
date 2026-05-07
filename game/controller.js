@@ -8,6 +8,7 @@ export class Controller {
     #remote = false;
 
     #keys = {};
+    #gamepadIndex = -1;
     #jumpReleased = true;
     #punchReleased = true;
     #pauseReleased = true;
@@ -23,7 +24,7 @@ export class Controller {
 
     #networkLatch = 0;
 
-    constructor(engine, pawn, variant = 0, remote = false) {
+    constructor(engine, pawn, variant = 0, gamepadIndex = -1, remote = false) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
         if (!(pawn instanceof Fighter))
@@ -32,6 +33,8 @@ export class Controller {
         this.#engine = engine;
         this.#pawn = pawn;
         this.#variant = variant;
+
+        this.#gamepadIndex = gamepadIndex;
 
         this.#remote = remote;
     }
@@ -42,6 +45,35 @@ export class Controller {
         if (this.#remote) return;
         window.addEventListener("keydown", (e) => this.#keys[e.code] = true);
         window.addEventListener("keyup", (e) => this.#keys[e.code] = false);
+    }
+
+    #pollGamepad() {
+        if (this.#gamepadIndex === -1) return;
+        const gp = navigator.getGamepads()[this.#gamepadIndex];
+        if (!gp) return;
+
+        // Standard Gamepad Mapping (Xbox/PlayStation/General)
+        // Buttons: 0=A/X, 1=B/Circle, 2=X/Square, 3=Y/Triangle, 9=Start
+        const buttons = gp.buttons;
+        const axes = gp.axes;
+        const deadzone = 0.5;
+
+        const leftStickX = axes[0];
+
+        this.inputs.MoveLeft ||= (leftStickX < -deadzone || buttons[14]?.pressed);
+        this.inputs.MoveRight ||= (leftStickX > deadzone || buttons[15]?.pressed);
+
+        // Jump: Up on D-Pad/Stick OR the Bottom Button (A/X)
+        this.inputs.Jump ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
+
+        // Punch: West Button (X on Xbox, Square on PS)
+        this.inputs.Punch ||= buttons[2].pressed;
+
+        // Block: Shoulders (L1/R1) or Triggers
+        this.inputs.Block ||= (buttons[4].pressed || buttons[5].pressed || buttons[6].pressed || buttons[7].pressed);
+
+        // Pause: Start button
+        this.inputs.Pause ||= buttons[9].pressed;
     }
 
     Tick(deltaTime) {
@@ -73,6 +105,8 @@ export class Controller {
             }
 
             this.inputs.Pause = this.#keys["Escape"];
+
+            this.#pollGamepad();
         }
 
         let moveDir = 0;
