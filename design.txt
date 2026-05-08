@@ -62,11 +62,11 @@ To do:
         [ ] Bottle thrown and broken
         [ ] Fade to black
     [ ] Bar Scene
-        [-] Bar at round 1 (add high chairs, waiter, cups on the counter, and a bottle of whiskey)
-        [ ] Bar at round 2
-        [ ] Bar at round 3
+        [-] Bar at round 1 (add waiter)
+        [ ] Bar at round 2 (add more people, add poster, background less focused, light more relevant on  the players)
+        [ ] Bar at round 3 (add more people, add camera and commentator, high chairs gone, background less focused, light more relevant on  the players)
     [ ] Cinematic Outro
-        [ ] Save local var that confirms the game was completed (after should, based on this var, use bar scene at round 3)
+        [ ] Save local var that confirms the game was completed (after should, based on this var, use bar scene at round 3 as default background)
     [x] Bald Character
         [x] Idling
         [x] Walking

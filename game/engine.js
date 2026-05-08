@@ -16,7 +16,7 @@ export class FighterEngine {
     #ctx = null;
     #objects = [];
 
-    #backgroundImage = Object.assign(new Image(), { src: "assets/bar.png" });
+    #backgroundImage = Object.assign(new Image(), { src: "assets/bar_1.png" });
     #foregroundImage = Object.assign(new Image(), { src: "assets/bar_foreground.png" });
 
     #mainMenu = null;
