@@ -4,6 +4,7 @@ import { Fighter } from "./fighter.js";
 export class AIController {
     #engine = null;
     #pawn = null;
+    #opponent = null;
 
     constructor(engine, pawn) {
         if (!(engine instanceof FighterEngine))
@@ -15,20 +16,15 @@ export class AIController {
         this.#pawn = pawn;
     }
 
-    Begin() { }
+    Begin() {
+        this.#opponent = this.#engine.getOpponent(this);
+    }
 
     Tick(deltaTime) {        
-        if (this.#engine.gameState !== "FIGHTING") return;
+        if (this.#engine.gameState !== "FIGHTING" || !this.#pawn || !this.#opponent) return;
 
-        const opponent = this.#engine.getOpponent(this);
-        if(Math.abs(opponent.loc.x - this.#pawn.loc.x) < 29){
-            this.#pawn.Punch()
-        }
-        if (opponent.vel.x > 50){
-            this.#pawn.SetBlocking(true);
-        } else {
-            this.#pawn.SetBlocking(false);
-        }
+        const distance = Math.abs(this.#opponent.x - this.#pawn.x);
+        const isToLeft = this.#opponent.x < this.#pawn.x;
 
         this.#pawn.moveInput = -1;
     }

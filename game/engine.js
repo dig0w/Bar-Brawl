@@ -16,8 +16,13 @@ export class FighterEngine {
     #ctx = null;
     #objects = [];
 
-    #backgroundImage = Object.assign(new Image(), { src: "assets/bar_1.png" });
-    #foregroundImage = Object.assign(new Image(), { src: "assets/bar_foreground.png" });
+    static barImage = Object.assign(new Image(), { src: "assets/bar.png" });
+    static barImageSize = { w: 128, h: 80 };
+    #barFrame = 0;
+    static defaultBarAnimTimer = 35 / 60;
+    static maxBarAnimState = 2;
+    #barAnimState = 0;
+    #barAnimTimer = FighterEngine.defaultBarAnimTimer;
 
     #mainMenu = null;
     #fighter0 = null;
@@ -149,7 +154,6 @@ export class FighterEngine {
         }
 
         this.SetGameState(0);
-        // this.SetGameState(2, 0);
 
         window.onbeforeunload = () => {
             this.Disconnect();
@@ -213,7 +217,6 @@ export class FighterEngine {
             if (this.#remoteStateBuffer) {
                 const data = this.#remoteStateBuffer;
 
-                // if (data.h) myFighter.TakeDamage(data.h.i, data.h.p, data.h.s);
                 if (data.hi !== undefined || data.hx !== undefined || data.hy !== undefined || data.hs !== undefined) myFighter.TakeDamage(data.hi, { x: data.hx, y: data.hy }, data.hs);
 
                 if (!isHost) {
@@ -234,6 +237,13 @@ export class FighterEngine {
 
         for (let i = this.#objects.length - 1; i >= 0; i--) {
             this.#objects[i].Tick(activeDeltaTime);
+        }
+
+        // Bar Animation
+        this.#barAnimTimer -= deltaTime;
+        if (this.#barAnimTimer <= 0) {
+            this.#barAnimState = (this.#barAnimState == FighterEngine.maxBarAnimState - 1 && Math.random() > .6) ? 2 : (this.#barAnimState + 1) % FighterEngine.maxBarAnimState;
+            this.#barAnimTimer += FighterEngine.defaultBarAnimTimer;
         }
 
 
@@ -323,9 +333,9 @@ export class FighterEngine {
 
             const fighterMidX = (this.#fighter0.loc.x + this.#fighter1.loc.x) / 2 + (this.#fighter0.size.w / 2);
             scrollX = (this.#canvas.width / 4) - fighterMidX;
-        } else if (this.#backgroundImage && this.#backgroundImage.complete) {
-            const scale = this.#canvasSize.h / this.#backgroundImage.height;
-            this.#worldWidth = this.#backgroundImage.width * scale;
+        } else if (FighterEngine.barImage && FighterEngine.barImage.complete) {
+            const scale = this.#canvasSize.h / FighterEngine.barImageSize.h;
+            this.#worldWidth = FighterEngine.barImageSize.w * scale;
 
             const fighterMidX = (this.fighter0.loc.x + this.fighter1.loc.x) / 2 + this.fighter0.size.w / 2;
             const viewPercent = Math.max(0, Math.min(1, fighterMidX / this.#canvasSize.w));
@@ -333,7 +343,22 @@ export class FighterEngine {
             const extraWidth = this.#worldWidth - this.#canvasSize.w;
             scrollX = -(extraWidth * viewPercent);
 
-            this.#ctx.drawImage(this.#backgroundImage, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
+            let frameCoords = { x: 0, y: FighterEngine.barImageSize.h * this.#barFrame };
+
+            // Bar Animation
+            switch (this.#barAnimState) {
+                case 0:
+                    frameCoords.x = 0;
+                    break;
+                case 1:
+                    frameCoords.x = FighterEngine.barImageSize.w;
+                    break;
+                case 2:
+                    frameCoords.x = FighterEngine.barImageSize.w * 2;
+                    break;
+            }
+
+            this.#ctx.drawImage(FighterEngine.barImage, frameCoords.x, frameCoords.y, FighterEngine.barImageSize.w, FighterEngine.barImageSize.h, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
         }
 
         this.#ctx.save();
@@ -345,8 +370,8 @@ export class FighterEngine {
 
         this.#ctx.restore();
 
-        if (this.#gameState !== "GAME_OVER" && this.#foregroundImage && this.#foregroundImage.complete) {
-            this.#ctx.drawImage(this.#foregroundImage, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
+        if (this.#gameState !== "GAME_OVER" && FighterEngine.barImage && FighterEngine.barImage.complete) {
+            this.#ctx.drawImage(FighterEngine.barImage, FighterEngine.barImageSize.w * 3, this.#barFrame * FighterEngine.barImageSize.h, FighterEngine.barImageSize.w, FighterEngine.barImageSize.h, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
         }
 
         for (let i = 0; i < this.#objects.length; i++) {
@@ -563,6 +588,8 @@ export class FighterEngine {
 
         this.#uiRoundTimer = FighterEngine.defaultUiRoundTimer;
         this.#uiRoundText = `Round ${this.#rounds + 1}`;
+
+        if (this.#gameMode === "CAREER") this.#barFrame = this.#rounds;
 
         this.#rounds++;
     }

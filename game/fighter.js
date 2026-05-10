@@ -222,7 +222,7 @@ export class Fighter {
         this.#UpdateHitboxes();
 
         // Body Animation
-        this.#bodyAnimTimer -= deltaTime
+        this.#bodyAnimTimer -= deltaTime;
         if (this.#bodyAnimTimer <= 0) {
             this.#bodyAnimState = (this.#bodyAnimState == Fighter.maxBodyAnimState - 1 && Math.random() > .9) ? 2 : (this.#bodyAnimState + 1) % Fighter.maxBodyAnimState;
             this.#bodyAnimTimer += Fighter.defaultBodyAnimTimer;
@@ -299,12 +299,12 @@ export class Fighter {
         }
 
         // Punched Animation
-        if (this.#punchedAnimTimer >= 0) this.#punchedAnimTimer -= deltaTime
+        if (this.#punchedAnimTimer >= 0) this.#punchedAnimTimer -= deltaTime;
         if (this.#punchedCooldown >= 0) this.#punchedCooldown -= deltaTime;
 
         // Die Animation
         if (this.#dieAnimTimer >= 0 && this.#health <= 0) {
-            this.#dieAnimTimer -= deltaTime
+            this.#dieAnimTimer -= deltaTime;
             if (this.#dieAnimTimer <= 0 && this.#dieAnimState != Fighter.maxDieAnimState - 1) {
                 this.#dieAnimState = (this.#dieAnimState + 1) % Fighter.maxDieAnimState;
                 this.#dieAnimTimer += Fighter.defaultDieAnimTimer;
@@ -313,7 +313,7 @@ export class Fighter {
 
         // Blood Animation
         if (this.#bloodAnimTimer >= 0 && this.#bloodAnimState >= 0) {
-            this.#bloodAnimTimer -= deltaTime
+            this.#bloodAnimTimer -= deltaTime;
             if (this.#bloodAnimTimer <= 0) {
                 this.#bloodAnimState = (this.#bloodAnimState == Fighter.maxBloodAnimState - 1) ? -1 : (this.#bloodAnimState + 1) % Fighter.maxBloodAnimState;
                 this.#bloodAnimTimer += Fighter.defaultBloodAnimTimer;
