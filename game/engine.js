@@ -579,7 +579,7 @@ export class FighterEngine {
     }
 
     StartRound() {
-        if (this.#rounds == FighterEngine.maxRounds || this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) {
+        if (this.#rounds == FighterEngine.maxRounds || ((this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) && this.#gameMode !== "CAREER")) {
             return this.GameOver();
         }
 

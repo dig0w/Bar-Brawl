@@ -63,8 +63,8 @@ To do:
         [ ] Fade to black
     [ ] Bar Scene
         [x] Bar at round 1
-        [ ] Bar at round 2 (add more people, some clutter on the ground, background less focused, light more relevant on the players)
-        [ ] Bar at round 3 (add more people, some more clutter on the ground, add camera and commentator, high chairs gone, background less focused, light more relevant on the players)
+        [ ] Bar at round 2 (add more people, background less focused, light more relevant on the players)
+        [ ] Bar at round 3 (add more people, add commentator, background less focused, light more relevant on the players)
         [ ] Animate
     [ ] Cinematic Outro
         [ ] Save local var that confirms the game was completed (after should, based on this var, use bar scene at round 3 as default background)
