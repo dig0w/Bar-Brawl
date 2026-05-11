@@ -144,6 +144,9 @@ export class Fighter {
     get size() { return this.#size }
 
     get isGrounded() { return this.#loc.y >= this.#groundY }
+    get isPunching() { return this.#punchAnimState >= 0 }
+    get isBlocking() { return this.#blockAnimState >= 0 }
+    get isStunned() { return this.#punchedCooldown > 0 }
 
     get hitboxes() { return this.#hitboxes }
     get health() { return this.#health }
@@ -168,7 +171,7 @@ export class Fighter {
     Tick(deltaTime) {
         // Move
         const moveSpeed = 100;
-        if (this.#punchAnimState < 0 && this.#blockAnimState < 0) {
+        if (!this.isPunching && !this.isBlocking) {
             this.#vel.x += this.moveInput * moveSpeed * deltaTime;
         }
 
@@ -548,12 +551,12 @@ export class Fighter {
     }
 
     Jump() {
-        if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.isGrounded)
+        if (!this.isPunching && !this.isBlocking && this.isGrounded && !this.isStunned)
             this.#vel.y -= this.#jumpForce;
     }
 
     Punch() {
-        if (this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.#punchCooldown <= 0 && this.#punchedCooldown <= 0) {
+        if (!this.isPunching && !this.isBlocking && this.#punchCooldown <= 0 && !this.isStunned) {
             this.#punchAnimState = 0;
             this.#punchAnimTimer = Fighter.defaultPunchAnimTimer;
             this.#vel.x += this.moveInput * 60;
@@ -566,7 +569,7 @@ export class Fighter {
     SetBlocking(isHeld) {
         this.#isBlockHeld = isHeld;
 
-        if (this.#isBlockHeld && this.#punchAnimState < 0 && this.#blockAnimState < 0 && this.#punchedCooldown <= 0) {
+        if (this.#isBlockHeld && !this.isPunching && !this.isBlocking && !this.isStunned) {
             this.#blockAnimState = 0;
             this.#blockAnimTimer = Fighter.defaultBlockAnimTimer;
             this.#vel.x = 0;
