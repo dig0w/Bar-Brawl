@@ -14,6 +14,8 @@ export class Menu {
     #stickThreshold = 0.5;
     #cooldown = 0;
 
+    static logoImage = Object.assign(new Image(), { src: "assets/logo.png" });
+
     static menusOptions = [
         ["START", "VERSUS", "OPTIONS"],
         ["LOCAL", "ONLINE", "BACK"],
@@ -246,7 +248,10 @@ export class Menu {
         ctx.fillStyle = "#00000055";
         ctx.fillRect(0, 0, this.#engine.canvas.width, this.#engine.canvas.height);
 
-        if (this.#engine.gameState === "MENU") this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
+        if (this.#engine.gameState === "MENU") {
+            ctx.drawImage(Menu.logoImage, this.#optionsXpos - Menu.logoImage.width / 2, (this.#engine.canvas.height / 4) - Menu.logoImage.height / 2);
+            // this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
+        }
         if (this.#engine.gameState === "PAUSED" && !this.#engine.isOnline) this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
 
         this.#options.forEach((text, i) => {
