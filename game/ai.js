@@ -25,7 +25,7 @@ export class AIController {
     }
 
     Begin() {
-        this.#opponent = this.#engine.getOpponent(this);
+        this.#opponent = this.#engine.getOpponent(this.#pawn);
 
         this.#lastDistance = Math.abs(this.#opponent.loc.x - this.#pawn.loc.x);
     }
@@ -36,19 +36,17 @@ export class AIController {
         let move = 0;
         let blocking = false;
 
-        const distance = Math.abs(this.#opponent.loc.x - this.#pawn.loc.x);
+        const myX = this.#pawn.loc.x;
+        const oppX = this.#opponent.loc.x;
+        const distance = Math.abs(oppX - myX);
         const distanceDiff = distance - this.#lastDistance;
 
-        const isClosingIn = distanceDiff < -.1 && ((this.#opponent.loc.x < this.#pawn.loc.x && this.#opponent.vel.x > 0.1) || (this.#opponent.loc.x > this.#pawn.loc.x && this.#opponent.vel.x < -0.1));
+        const isClosingIn = distanceDiff < -.1 && ((oppX < myX && this.#opponent.vel.x > 0.1) || (oppX > myX && this.#opponent.vel.x < -0.1));
         const isInRange = distance < AIController.punchRange;
+        const isJustOutsideRange = distance >= AIController.punchRange && distance < AIController.punchRange + 30;
 
-        // should calculate opponent state (attacking, defending)
-        // defending - distance = big, or increasing
-        // attacking - distance = small, or decreasing
-
-        // Opponent Punching
         if (this.#opponent.isPunching && !this.#opponentWasPunching) {
-            this.#reactionTimer = Fighter.defaultPunchAnimTimer * 0;
+            this.#reactionTimer = 0;
             this.#blockDuration = Fighter.defaultPunchAnimTimer * 2;
         }
         this.#opponentWasPunching = this.#opponent.isPunching;
@@ -56,29 +54,29 @@ export class AIController {
         if (this.#reactionTimer > 0) this.#reactionTimer -= deltaTime;
         if (this.#blockDuration > 0 && this.#reactionTimer <= 0) this.#blockDuration -= deltaTime;
 
-        // should calculate hit height to aim for the head
-        const heightDiff = (this.#opponent.loc.y + this.#opponent.size.h * 0.2) - (this.#pawn.loc.y);
-        const shouldJump = heightDiff < -10;
-        if (isInRange && shouldJump) this.#pawn.Jump();
+        const shouldBait = isClosingIn && !this.#opponent.isPunching && distance < AIController.punchRange + 20;
 
-        // ai should choose state oposite to opponents state
-        if ((isClosingIn || isInRange) && this.#reactionTimer <= 0 && this.#blockDuration > 0) {
-            // Defend
-            console.log("Defending");
+        if (this.#blockDuration > 0) {
             blocking = isInRange;
             move = 0;
-        } else {
-            // Attack
-            console.log("Attacking");
-            blocking = false;
-            move = (this.#opponent.loc.x < this.#pawn.loc.x) ? -1 : 1;
-
-            if (isInRange) this.#pawn.Punch();
         }
+        else if (shouldBait) {
+            move = (oppX < myX) ? 1 : -1;
+            blocking = false;
+        }
+        else {
+            move = (oppX < myX) ? -1 : 1;
+
+            if (isInRange) {
+                this.#pawn.Punch();
+            }
+        }
+
+        const heightDiff = (this.#opponent.loc.y + this.#opponent.size.h * 0.2) - (this.#pawn.loc.y);
+        if (isInRange && heightDiff < -10 && this.#pawn.isOnGround) this.#pawn.Jump();
 
         this.#pawn.moveInput = move;
         this.#pawn.SetBlocking(blocking);
-
         this.#lastDistance = distance;
     }
 

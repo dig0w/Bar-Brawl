@@ -68,6 +68,7 @@ To do:
         [ ] Animate
     [ ] Cinematic Outro
         [ ] Save local var that confirms the game was completed (after should, based on this var, use bar scene at round 3 as default background)
+        [x] Credits
     [x] Bald Character
         [x] Idling
         [x] Walking
@@ -100,7 +101,7 @@ To do:
         [-] Gamepad controls (test with 2 controllers or more)
         [ ] Crouch?
         [ ] Kick?
-    [ ] UI
+    [x] UI
         [x] Health Bar
         [x] Rounds won count
         [x] Round count
@@ -120,7 +121,6 @@ To do:
     [ ] AI
         [ ] Attack state (it should rush the opponent and punch)
         [ ] Defend state (it should back off and block if opponent attacking)
-        [ ] Dribble state (it should try to dribble the opponent in order to get a better position for an attack)
     [x] Multiplayer
         [x] Send game state with delta compression
         [x] Prefeer attacker over defender

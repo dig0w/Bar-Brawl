@@ -85,7 +85,7 @@ export class Fighter {
     #fistHitBox = null;
 
     static hitboxesDamage = [15, 10, 7, 7, 5, 5];
-    // static hitboxesDamage = [200, 200, 200, 200, 200, 200];
+    // static hitboxesDamage = [2000, 2000, 2000, 2000, 2000, 2000];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
     #isDead = false;

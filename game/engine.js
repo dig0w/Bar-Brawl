@@ -60,6 +60,11 @@ export class FighterEngine {
     static defaultUiGameOverTimer = .25;
     #uiGameOverTimer = 0;
 
+    static defaultUiCreditsTimer = 8;
+    #uiCreditsTimer = 0;
+    static uiCreditsSize = 12;
+    #uiCreditsLocY = 0;
+
     #uiRoundText = "";
     static defaultUiRoundTimer = .75;
     #uiRoundTimer = 0;
@@ -95,8 +100,7 @@ export class FighterEngine {
     #fadeTimer = 0;
     #fadeDirection = 0; // 1 = fade to, -1 = fade from, 0 = none
 
-    constructor() {
-    }
+    constructor() { }
 
     get gameState() { return this.#gameState; }
     get gameMode() { return this.#gameMode; }
@@ -117,7 +121,7 @@ export class FighterEngine {
     get fighter1() { return this.#fighter1; }
     getOpponent(fighter) { return this.fighter0 === fighter ? this.fighter1 : this.fighter0 }
 
-    getScore(fighter) { return fighter == this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
+    getScore(fighter) { return fighter === this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
 
     Begin() {
         this.#canvas = document.getElementById("game-canvas");
@@ -251,6 +255,15 @@ export class FighterEngine {
             this.#uiGameOverTimer -= deltaTime;
         }
 
+        if (this.#uiCreditsTimer > 0) {
+            this.#uiCreditsTimer -= deltaTime;
+
+            if (this.#uiCreditsTimer <= 0) {
+                this.SetGameState(0);
+                this.Fade("#000", 500, -1);
+            }
+        }
+
         if (this.#uiRoundTimer > 0) {
             this.#uiRoundTimer -= deltaTime;
 
@@ -327,7 +340,10 @@ export class FighterEngine {
 
         let scrollX = 0;
 
-        if (this.#gameState === "GAME_OVER") {
+        if (this.#gameState === "CREDITS") {
+            this.#ctx.fillStyle = "#000000";
+            this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+        } else if (this.#gameState === "GAME_OVER") {
             this.#ctx.fillStyle = "#000000";
             this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
 
@@ -364,13 +380,16 @@ export class FighterEngine {
         this.#ctx.save();
         this.#ctx.translate((scrollX | 0), 0);
 
-        for (let i = 0; i < this.#objects.length; i++) {
-            this.#objects[i].Draw(this.#ctx);
+        if (this.#gameState !== "CREDITS") {
+            for (let i = 0; i < this.#objects.length; i++) {
+                this.#objects[i].Draw(this.#ctx);
+            }
         }
 
         this.#ctx.restore();
 
-        if (this.#gameState !== "GAME_OVER" && FighterEngine.barImage && FighterEngine.barImage.complete) {
+        // Foreground
+        if (this.#gameState !== "GAME_OVER" && this.#gameState !== "CREDITS" && FighterEngine.barImage && FighterEngine.barImage.complete) {
             this.#ctx.drawImage(FighterEngine.barImage, FighterEngine.barImageSize.w * 3, this.#barFrame * FighterEngine.barImageSize.h, FighterEngine.barImageSize.w, FighterEngine.barImageSize.h, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
         }
 
@@ -381,10 +400,30 @@ export class FighterEngine {
         this.#ctx.restore();
         this.#ctx.save();
 
-        if (this.#gameState === "GAME_OVER") {
+        if (this.#gameState === "CREDITS") {
+            let fontSize1 = FighterEngine.uiCreditsSize;
+            let fontSize2 = FighterEngine.uiRoundAfterSize;
+
+            const progress = 1 - (this.#uiCreditsTimer / FighterEngine.defaultUiCreditsTimer);
+
+            let Y = this.#uiCreditsLocY + ((this.#uiCreditsLocY * -2) - this.#uiCreditsLocY) * progress;
+
+            const growPercent = Math.min(1, progress / (1/4/2/2/2));
+            fontSize1 *= growPercent;
+            fontSize2 *= growPercent;
+
+            this.DrawPixelText(this.#ctx, "Game by", (this.#uiRoundLoc.x | 0), (Y | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, "dig0w", (this.#uiRoundLoc.x | 0), (Y + 15 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+
+            this.DrawPixelText(this.#ctx, "Logo by", (this.#uiRoundLoc.x | 0), (Y + 75 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, "Rift", (this.#uiRoundLoc.x | 0), (Y + 90 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+
+            this.DrawPixelText(this.#ctx, "Special Thanks to", (this.#uiRoundLoc.x | 0), (Y + 150 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, "Dogo, Mewy", (this.#uiRoundLoc.x | 0), (Y + 165 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+        } else if (this.#gameState === "GAME_OVER") {
             let fontSize = FighterEngine.uiRoundSize;
             if (this.#uiGameOverTimer > 0) {
-                const percent = this.#uiGameOverTimer / Fighter.defaultUiGameOverTimer;
+                const percent = this.#uiGameOverTimer / FighterEngine.defaultUiGameOverTimer;
                 fontSize *= (1 - percent);
             }
 
@@ -523,6 +562,15 @@ export class FighterEngine {
                 this.#mainMenu.Reset();
                 this.#mainMenu.ToMenu(6);
                 break;
+            case 7:
+            case "CREDITS":
+                this.#gameState = "CREDITS";
+
+                this.#canvas.style.cursor = "none";
+
+                this.#uiCreditsTimer = FighterEngine.defaultUiCreditsTimer;
+                this.#uiCreditsLocY = this.#canvas.height;
+                break;
         }
 
         if (mode >= 0) {
@@ -535,8 +583,10 @@ export class FighterEngine {
                     this.#gameMode = "CAREER";
 
                     this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
+                    // this.#ctrl0 = new AIController(this, this.#fighter0);
                     this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new AIController(this, this.#fighter1);
+                    // this.#ctrl1 = new Controller(this, this.#fighter1, 2, 0);
                     this.#objects.push(this.#ctrl1);
                     break;
                 case 1:
@@ -633,10 +683,11 @@ export class FighterEngine {
         this.SetGameState(5);
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
 
-        await FighterEngine.wait(5000);
+        await FighterEngine.wait(4000);
         this.Fade("#000", 500);
         await FighterEngine.wait(1200);
-        this.SetGameState(0);
+        if (this.#gameMode !== "CAREER") this.SetGameState(0);
+        else this.SetGameState(7);
         if (this.isOnline) this.Disconnect();
 
         this.Fade("#000", 500, -1);
@@ -837,7 +888,7 @@ export class FighterEngine {
         const spacing = 0;
         const spaceWidth = (outSize.w / 3) | 0;
 
-        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?_"]
+        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?_,"]
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {
