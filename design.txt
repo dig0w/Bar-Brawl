@@ -118,9 +118,10 @@ To do:
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)
         [x] Online (peer-to-peer)   (Versus -> Online)
-    [ ] AI
-        [ ] Attack state (it should rush the opponent and punch)
-        [ ] Defend state (it should back off and block if opponent attacking)
+    [x] AI
+        [x] Attack state (it should rush the opponent and punch)
+        [x] Defend state (it should back off and block if opponent attacking)
+        [x] Difficulty value
     [x] Multiplayer
         [x] Send game state with delta compression
         [x] Prefeer attacker over defender

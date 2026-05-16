@@ -583,9 +583,9 @@ export class FighterEngine {
                     this.#gameMode = "CAREER";
 
                     this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
-                    // this.#ctrl0 = new AIController(this, this.#fighter0);
+                    // this.#ctrl0 = new AIController(this, this.#fighter0, 1);
                     this.#objects.push(this.#ctrl0);
-                    this.#ctrl1 = new AIController(this, this.#fighter1);
+                    this.#ctrl1 = new AIController(this, this.#fighter1, .5);
                     // this.#ctrl1 = new Controller(this, this.#fighter1, 2, 0);
                     this.#objects.push(this.#ctrl1);
                     break;
