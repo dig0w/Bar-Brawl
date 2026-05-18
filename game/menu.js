@@ -190,7 +190,7 @@ export class Menu {
 
         switch (choice) {
             case "START":
-                this.StartGame(0);
+                this.StartGame(0, 1);
                 break;
             case "VERSUS":
                 this.ToMenu(1);

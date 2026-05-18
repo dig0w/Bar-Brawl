@@ -38,6 +38,12 @@ export class FighterEngine {
     #scoreF0 = 0;
     #scoreF1 = 0;
 
+    static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
+    static frameStamp = [ 2, 2.15, 2.3, 2.45, 2.6, 2.75 ];
+    #introTimer = 0;
+    static maxIntroState = 6;
+    #introState = 0;
+
     static serverURL = "http://localhost:3000";
     #sessionCode;
     #socket;
@@ -113,13 +119,13 @@ export class FighterEngine {
     get canvasSize() { return this.#canvasSize; }
     get canvas() { return this.#canvas; }
 
-    get isHost() { return this.#gameMode === "VERSUS_HOST" }
-    get isOnline() { return (this.isHost || this.#gameMode === "VERSUS_CLIENT") }
-    isFighterLocal(fighter)  { return this.#ctrl0.pawn === fighter }
+    get isHost() { return this.#gameMode === "VERSUS_HOST"; }
+    get isOnline() { return (this.isHost || this.#gameMode === "VERSUS_CLIENT"); }
+    isFighterLocal(fighter)  { return this.#ctrl0.pawn === fighter; }
 
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
-    getOpponent(fighter) { return this.fighter0 === fighter ? this.fighter1 : this.fighter0 }
+    getOpponent(fighter) { return this.fighter0 === fighter ? this.fighter1 : this.fighter0; }
 
     getScore(fighter) { return fighter === this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
 
@@ -250,6 +256,27 @@ export class FighterEngine {
             this.#barAnimTimer += FighterEngine.defaultBarAnimTimer;
         }
 
+        // Intro
+        if (this.#gameState === "INTRO") {
+            this.#introTimer += deltaTime;
+
+            const currentFrameMaxTime = FighterEngine.frameStamp[this.#introState];
+
+            if (this.#introTimer >= currentFrameMaxTime) {
+                if (this.#introState === FighterEngine.maxIntroState - 1) {
+                    this.Fade("#000", 500);
+                    this.#introState++;
+                } 
+                else if (this.#introState < FighterEngine.maxIntroState - 1) {
+                    this.#introState++;
+                }
+            }
+
+            if (this.#introState >= FighterEngine.maxIntroState && this.#fadeTimer >= this.#fadeDuration) {
+                this.SetGameState(2, 0); 
+                this.Fade("#000", 500, -1);
+            }
+        }
 
         if (this.#uiGameOverTimer > 0) {
             this.#uiGameOverTimer -= deltaTime;
@@ -340,7 +367,15 @@ export class FighterEngine {
 
         let scrollX = 0;
 
-        if (this.#gameState === "CREDITS") {
+        if (this.#gameState === "INTRO") {
+            const frameWidth = FighterEngine.IntroSheet.width / FighterEngine.maxIntroState;
+            const frameHeight = FighterEngine.IntroSheet.height;
+
+            let frameCoords = { x: this.#introState * frameWidth, y: 0 };
+            if (frameCoords.x === FighterEngine.IntroSheet.width) frameCoords.x = (this.#introState - 1) * frameWidth;
+
+            this.#ctx.drawImage(FighterEngine.IntroSheet, (frameCoords.x | 0), (frameCoords.y | 0), (frameWidth | 0), (this.#canvasSize.h | 0), 0, 0, (this.#canvasSize.w | 0), (this.#canvasSize.h | 0));
+        } else if (this.#gameState === "CREDITS") {
             this.#ctx.fillStyle = "#000000";
             this.#ctx.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
         } else if (this.#gameState === "GAME_OVER") {
@@ -380,7 +415,7 @@ export class FighterEngine {
         this.#ctx.save();
         this.#ctx.translate((scrollX | 0), 0);
 
-        if (this.#gameState !== "CREDITS") {
+        if (this.#gameState !== "CREDITS" && this.#gameState !== "INTRO") {
             for (let i = 0; i < this.#objects.length; i++) {
                 this.#objects[i].Draw(this.#ctx);
             }
@@ -389,7 +424,7 @@ export class FighterEngine {
         this.#ctx.restore();
 
         // Foreground
-        if (this.#gameState !== "GAME_OVER" && this.#gameState !== "CREDITS" && FighterEngine.barImage && FighterEngine.barImage.complete) {
+        if (this.#gameState !== "GAME_OVER" && this.#gameState !== "CREDITS" && this.#gameState !== "INTRO" && FighterEngine.barImage && FighterEngine.barImage.complete) {
             this.#ctx.drawImage(FighterEngine.barImage, FighterEngine.barImageSize.w * 3, this.#barFrame * FighterEngine.barImageSize.h, FighterEngine.barImageSize.w, FighterEngine.barImageSize.h, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
         }
 
@@ -526,6 +561,9 @@ export class FighterEngine {
                 mode = 0;
 
                 this.#canvas.style.cursor = "none";
+
+                this.#introTimer = 0;
+                this.#introState = 0;
                 break;
             case 2:
             case "PRE_ROUND":
@@ -585,7 +623,7 @@ export class FighterEngine {
                     this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
                     // this.#ctrl0 = new AIController(this, this.#fighter0, 1);
                     this.#objects.push(this.#ctrl0);
-                    this.#ctrl1 = new AIController(this, this.#fighter1, .5);
+                    this.#ctrl1 = new AIController(this, this.#fighter1, .8);
                     // this.#ctrl1 = new Controller(this, this.#fighter1, 2, 0);
                     this.#objects.push(this.#ctrl1);
                     break;

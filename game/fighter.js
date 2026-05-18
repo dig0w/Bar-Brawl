@@ -135,17 +135,17 @@ export class Fighter {
         }
     }
 
-    get loc() { return this.#loc }
-    get vel() { return this.#vel }
-    get size() { return this.#size }
+    get loc() { return this.#loc; }
+    get vel() { return this.#vel; }
+    get size() { return this.#size; }
 
-    get isGrounded() { return this.#loc.y >= this.#groundY }
-    get isPunching() { return this.#punchAnimState >= 0 }
-    get isBlocking() { return this.#isBlocking }
-    get isStunned() { return this.#punchedCooldown > 0 }
+    get isGrounded() { return this.#loc.y >= this.#groundY; }
+    get isPunching() { return this.#punchAnimState >= 0; }
+    get isBlocking() { return this.#isBlocking; }
+    get isStunned() { return this.#punchedCooldown > 0; }
 
-    get hitboxes() { return this.#hitboxes }
-    get health() { return this.#health }
+    get hitboxes() { return this.#hitboxes; }
+    get health() { return this.#health; }
 
     Begin() {
         this.#groundY = this.#engine.groundY - this.#size.h;
