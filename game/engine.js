@@ -39,9 +39,10 @@ export class FighterEngine {
     #scoreF1 = 0;
 
     static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
-    static frameStamp = [ 2, 2.15, 2.3, 2.45, 2.6, 2.75 ];
+    static frameStamp = [ 2, 2.15, 2.3, 2.45, 2.6, 4, 4.05, 4.1, 4.15, 4.2, 4.25, 6 ];
     #introTimer = 0;
-    static maxIntroState = 6;
+    static maxIntroFramesLine = 6;
+    static maxIntroState = 12;
     #introState = 0;
 
     static serverURL = "http://localhost:3000";
@@ -368,11 +369,19 @@ export class FighterEngine {
         let scrollX = 0;
 
         if (this.#gameState === "INTRO") {
-            const frameWidth = FighterEngine.IntroSheet.width / FighterEngine.maxIntroState;
-            const frameHeight = FighterEngine.IntroSheet.height;
+            const totalColumns = FighterEngine.maxIntroFramesLine;
+            const totalRows = Math.ceil(FighterEngine.maxIntroState / totalColumns);
 
-            let frameCoords = { x: this.#introState * frameWidth, y: 0 };
-            if (frameCoords.x === FighterEngine.IntroSheet.width) frameCoords.x = (this.#introState - 1) * frameWidth;
+            const frameWidth = FighterEngine.IntroSheet.width / totalColumns;
+            const frameHeight = FighterEngine.IntroSheet.height / totalRows;
+
+            const colIndex = this.#introState % totalColumns;
+            const rowIndex = Math.floor(this.#introState / totalColumns);
+
+            let frameCoords = {
+                x: colIndex * frameWidth,
+                y: rowIndex * frameHeight
+            };
 
             this.#ctx.drawImage(FighterEngine.IntroSheet, (frameCoords.x | 0), (frameCoords.y | 0), (frameWidth | 0), (this.#canvasSize.h | 0), 0, 0, (this.#canvasSize.w | 0), (this.#canvasSize.h | 0));
         } else if (this.#gameState === "CREDITS") {

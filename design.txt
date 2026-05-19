@@ -56,8 +56,8 @@ To do:
         [x] Bottle on counter
         [x] Start grabbing the bottle
         [x] Grab bottle
-        [ ] Zoom out
-        [ ] Hold
+        [x] Zoom out
+        [x] Hold
         [ ] Start throwing bottle
         [ ] Bottle thrown and broken
         [x] Fade to black
@@ -117,18 +117,20 @@ To do:
     [ ] Gamemodes
         [x] Local PvP               (Versus -> Local)
         [ ] Local AI                (Start)
+            [ ] AI should force the third round (if looses first should became super hard)
         [x] Online (peer-to-peer)   (Versus -> Online)
     [x] AI
         [x] Attack state (it should rush the opponent and punch)
         [x] Defend state (it should back off and block if opponent attacking)
         [x] Difficulty value
-    [x] Multiplayer
+    [ ] Multiplayer
         [x] Send game state with delta compression
         [x] Prefeer attacker over defender
         [x] Host manages health
         [x] Host manages round over
         [x] Manage pause menu
         [x] Remove delta compression and use bytes instead of jsons
+        [ ] Use service worker to keep game running when on Versus Online
 
 
 Issue:
@@ -171,3 +173,30 @@ Network Packet JSON:
     13 Bytes (10 for Client)
     f (1), x (2), y (2), vx (2), vy (2), c (1), hp0 (1), hp1 (1), ro (1), hi (1), hx (2), hy (2), hs (2)
     Max 20 Bytes (17 for Client)
+
+
+Intro Frame Size
+0:  393x262 (-169, -92)
+11: 230x153 (-72, -44)
+
+393 - 230 = 163
+163 / 6 = 27.16666
+
+6:  365.833
+7:  338.6664
+8:  311.4998
+9:  284.3332
+10: 257.1666
+
+
+120 - 230
+ x  - 257.1666
+
+x = (120 * 257.1666) / 230
+x = 134.1739
+
+6:  190.8694
+7:  176.6955
+8:  162.5216
+9:  148.3478
+10: 134.1739
