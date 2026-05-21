@@ -39,10 +39,10 @@ export class FighterEngine {
     #scoreF1 = 0;
 
     static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
-    static frameStamp = [ 2, 2.15, 2.3, 2.45, 2.6, 4, 4.05, 4.1, 4.15, 4.2, 4.25, 6 ];
+    static frameStamp = [ 2, 2.15, 2.3, 2.45, 2.6, 4, 4.05, 4.1, 4.15, 4.2, 4.25, 6, 6.15, 6.3, 6.45, 6.6, 6.75, 8 ];
     #introTimer = 0;
     static maxIntroFramesLine = 6;
-    static maxIntroState = 12;
+    static maxIntroState = 18;
     #introState = 0;
 
     static serverURL = "http://localhost:3000";

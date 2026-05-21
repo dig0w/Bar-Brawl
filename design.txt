@@ -58,9 +58,10 @@ To do:
         [x] Grab bottle
         [x] Zoom out
         [x] Hold
-        [ ] Start throwing bottle
-        [ ] Bottle thrown and broken
+        [x] Start throwing bottle
+        [x] Bottle thrown and broken
         [x] Fade to black
+        [ ] Text lines
     [ ] Bar Scene
         [x] Bar at round 1
         [ ] Bar at round 2 (add more people, background less focused, light more relevant on the players)
