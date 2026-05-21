@@ -925,6 +925,40 @@ export class FighterEngine {
         return res;
     }
 
+    loadLibs() {
+        return new Promise((resolve, reject) => {
+            if (window.SimplePeer && window.io) {
+                return resolve();
+            }
+
+            console.log("Loading multiplayer network libraries...");
+
+            const socketScript = document.createElement("script");
+            socketScript.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
+
+            const peerScript = document.createElement("script");
+            peerScript.src = "https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js";
+
+            let loadedCount = 0;
+            const onScriptLoad = () => {
+                loadedCount++;
+                if (loadedCount === 2) {
+                    console.log("Multiplayer libraries successfully compiled.");
+                    resolve();
+                }
+            };
+
+            socketScript.onload = onScriptLoad;
+            peerScript.onload = onScriptLoad;
+
+            socketScript.onerror = reject;
+            peerScript.onerror = reject;
+
+            document.head.appendChild(socketScript);
+            document.head.appendChild(peerScript);
+        });
+    }
+
 
     DrawPixelText(ctx, text, x, y, size = 5, fillColor = "#fff", outlineColor = "#000") {
         if (!this.#redFontSheet || !this.#greenFontSheet || size <= 0) return;

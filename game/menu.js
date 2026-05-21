@@ -203,6 +203,7 @@ export class Menu {
                 break;
             case "ONLINE":
                 this.ToMenu(2);
+                this.#engine.loadLibs();
                 break;
             case "HOST":
                 this.#engine.Host();

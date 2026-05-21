@@ -132,6 +132,7 @@ To do:
         [x] Manage pause menu
         [x] Remove delta compression and use bytes instead of jsons
         [ ] Use service worker to keep game running when on Versus Online
+        [x] Download multiplayer libraries only when needed
 
 
 Issue:
