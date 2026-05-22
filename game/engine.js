@@ -550,7 +550,6 @@ export class FighterEngine {
             case 0:
             case "MENU":
                 this.#gameState = "MENU";
-                mode = -1;
 
                 if (this.#peer || this.#socket) this.Disconnect();
 
@@ -803,7 +802,7 @@ export class FighterEngine {
         p.on("close", () => this.Disconnect());
         p.on("error", (a) => {
             console.log("error p", a);
-            this.Disconnect()
+            this.Disconnect();
         });
 
         this.#peer = p;
@@ -848,7 +847,7 @@ export class FighterEngine {
         }
 
         this.#sessionCode = null;
-        this.SetGameState(0);
+        this.SetGameState(0, 0);
     }
 
     #Pack(data) {

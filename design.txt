@@ -122,14 +122,14 @@ To do:
         [x] Attack state (it should rush the opponent and punch)
         [x] Defend state (it should back off and block if opponent attacking)
         [x] Difficulty value
-    [ ] Multiplayer
+    [x] Multiplayer
         [x] Send game state with delta compression
         [x] Prefeer attacker over defender
         [x] Host manages health
         [x] Host manages round over
         [x] Manage pause menu
         [x] Remove delta compression and use bytes instead of jsons
-        [ ] Use service worker to keep game running when on Versus Online
+        [x] Use web worker to keep game running when on Versus Online
         [x] Download multiplayer libraries only when needed
 
 
