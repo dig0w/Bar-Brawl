@@ -97,7 +97,7 @@ To do:
             [x] On hit camera shake
         [x] Rounds
         [x] Shadows under characters
-        [-] Gamepad controls (test with 2 controllers or more)
+        [x] Gamepad controls (test with 2 controllers or more)
         [ ] Crouch?
         [ ] Kick?
     [x] UI
