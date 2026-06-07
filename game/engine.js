@@ -39,7 +39,7 @@ export class FighterEngine {
     #scoreF1 = 0;
 
     static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
-    static frameStamp = [ 2, 2.15, 2.3, 2.45, 2.6, 4, 4.05, 4.1, 4.15, 4.2, 4.25, 6, 6.15, 6.3, 6.45, 6.6, 6.75, 8 ];
+    static frameStamp = [ 1, 1.15, 1.3, 1.45, 1.6, 3, 3.05, 3.1, 3.15, 3.2, 3.25, 4.75, 6, 6.15, 6.3, 6.45, 6.6, 7.1 ];
     #introTimer = 0;
     static maxIntroFramesLine = 6;
     static maxIntroState = 18;
@@ -271,6 +271,10 @@ export class FighterEngine {
                 else if (this.#introState < FighterEngine.maxIntroState - 1) {
                     this.#introState++;
                 }
+            }
+
+            if (this.#introState == 16) {
+                this.CameraShake(5, 150);
             }
 
             if (this.#introState >= FighterEngine.maxIntroState && this.#fadeTimer >= this.#fadeDuration) {

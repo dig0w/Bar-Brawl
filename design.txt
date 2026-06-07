@@ -52,7 +52,7 @@ By combining a Block with Crouch, defends a low punch.
 
 
 To do:
-    [ ] Cinematic Intro
+    [x] Cinematic Intro
         [x] Bottle on counter
         [x] Start grabbing the bottle
         [x] Grab bottle
@@ -61,14 +61,14 @@ To do:
         [x] Start throwing bottle
         [x] Bottle thrown and broken
         [x] Fade to black
-        [ ] Text lines
-    [ ] Bar Scene
+        [x] Text lines
+    [x] Bar Scene
         [x] Bar at round 1
-        [ ] Bar at round 2 (add more people, background less focused, light more relevant on the players)
-        [ ] Bar at round 3 (add more people, add commentator, background less focused, light more relevant on the players)
-        [ ] Animate
+        [x] Bar at round 2
+        [x] Bar at round 3
+        [x] Animate
     [x] Credits
-    [ ] Sound Effects
+    [ ] Sound Effects (Chiptone (by sfbgames), jsfxr / bfxr, OpenGameArt.org, Sonniss (The Archive), Freesound.org)
         [ ] Punch 1
         [ ] Punch 2
         [ ] Groan 1
@@ -80,7 +80,6 @@ To do:
         [ ] UI
         [ ] Player (number) wins!
         [ ] Bottle smash
-        [ ] Intro lines
         [ ] Background noise at round 1
         [ ] Background noise at round 2
         [ ] Background noise at round 3
@@ -191,7 +190,7 @@ Network Packet JSON:
     Max 20 Bytes (17 for Client)
 
 
-Intro Frame Size
+Intro Frame Sizes:
 0:  393x262 (-169, -92)
 11: 230x153 (-72, -44)
 
