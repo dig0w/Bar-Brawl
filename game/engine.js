@@ -16,7 +16,7 @@ export class FighterEngine {
     #ctx = null;
     #objects = [];
 
-    static barImage = Object.assign(new Image(), { src: "assets/bar.png" });
+    static barImage = Object.assign(new Image(), { src: "assets/bar.webp" });
     static barImageSize = { w: 128, h: 80 };
     #barFrame = 0;
     static defaultBarAnimTimer = 35 / 60;
@@ -38,7 +38,7 @@ export class FighterEngine {
     #scoreF0 = 0;
     #scoreF1 = 0;
 
-    static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
+    static IntroSheet = Object.assign(new Image(), { src: "assets/intro.webp" });
     static frameStamp = [ 1, 1.15, 1.3, 1.45, 1.6, 3, 3.05, 3.1, 3.15, 3.2, 3.25, 4.75, 6, 6.15, 6.3, 6.45, 6.6, 7.1 ];
     #introTimer = 0;
     static maxIntroFramesLine = 6;
@@ -58,7 +58,7 @@ export class FighterEngine {
     #lastReceivedFrame = -1;
     #roundOverTrigger = 0;
 
-    static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
+    static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.webp" });
     #redFontSheet = null;
     #greenFontSheet = null;
     static tCanvas = document.createElement("canvas");
@@ -107,13 +107,15 @@ export class FighterEngine {
     #fadeTimer = 0;
     #fadeDirection = 0; // 1 = fade to, -1 = fade from, 0 = none
 
-    #sounds = [
-        new Audio("assets/punch_1.wav"),
-        new Audio("assets/punch_2.wav"),
-        new Audio("assets/groan_1.wav"),
-        new Audio("assets/groan_2.wav"),
-        new Audio("assets/ui.wav"),
+    #audioCtx = null;
+    static soundUrls = [
+        "assets/punch_1.ogg",
+        "assets/punch_2.ogg",
+        "assets/groan_1.ogg",
+        "assets/groan_2.ogg",
+        "assets/ui.ogg",
     ]
+    #soundBuffers = [];
     #volume = .1;
 
     constructor() { }
@@ -174,6 +176,9 @@ export class FighterEngine {
         }
 
         this.SetGameState(0);
+
+        this.#audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.#preloadSounds();
 
         window.onbeforeunload = () => {
             this.Disconnect();
@@ -759,15 +764,43 @@ export class FighterEngine {
         this.SetGameState(this.#prevGameState);
     }
 
+
+    async #preloadSounds() {
+        for (let i = 0; i < FighterEngine.soundUrls.length; i++) {
+            try {
+                const response = await fetch(FighterEngine.soundUrls[i]);
+                const arrayBuffer = await response.arrayBuffer();
+
+                this.#soundBuffers[i] = await this.#audioCtx.decodeAudioData(arrayBuffer);
+            } catch (err) {
+                console.error(`Failed to load sound: ${FighterEngine.soundUrls[i]}`, err);
+            }
+        }
+        console.log("All retro sounds decoded directly into memory!");
+    }
+
     PlaySound(index, pitch = 1.0) {
-        if (!this.#sounds[index]) return;
+        const buffer = this.#soundBuffers[index];
+        if (!buffer) return;
+
+        if (this.#audioCtx.state === "suspended") {
+            this.#audioCtx.resume();
+        }
+
+        const source = this.#audioCtx.createBufferSource();
+        source.buffer = buffer;
+
+        const gainNode = this.#audioCtx.createGain();
+        gainNode.gain.value = this.#volume;
+
+        source.playbackRate.value = pitch;
+
+        source.connect(gainNode);
+        gainNode.connect(this.#audioCtx.destination);
 
         console.log("Playing sound at index: ", index);
 
-        const soundClone = this.#sounds[index].cloneNode(true);
-        soundClone.volume = this.#volume;
-        soundClone.playbackRate = pitch;
-        soundClone.play();
+        source.start(0);
     }
 
 

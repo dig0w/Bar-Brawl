@@ -14,7 +14,7 @@ export class Menu {
     #stickThreshold = 0.5;
     #cooldown = 0;
 
-    static logoImage = Object.assign(new Image(), { src: "assets/logo.png" });
+    static logoImage = Object.assign(new Image(), { src: "assets/logo.webp" });
 
     static menusOptions = [
         ["START", "VERSUS", "OPTIONS"],
@@ -192,7 +192,7 @@ export class Menu {
 
         const choice = this.#options[this.#selectedIndex];
 
-        // this.#engine.PlaySound(4, 0.9 + Math.random() * 0.2);
+        this.#engine.PlaySound(4, 0.9 + Math.random() * 0.2);
 
         switch (choice) {
             case "START":

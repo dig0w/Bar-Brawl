@@ -15,8 +15,8 @@ export class Fighter {
 
     #jumpForce = 250;
 
-    static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_sheet.png" });
-    static bodyImg1 = Object.assign(new Image(), { src: "assets/biker_sheet.png" });
+    static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_sheet.webp" });
+    static bodyImg1 = Object.assign(new Image(), { src: "assets/biker_sheet.webp" });
     #bodyImg = null;
     static defaultBodyAnimTimer = 20 / 60;
     static maxBodyAnimState = 2;
@@ -55,7 +55,7 @@ export class Fighter {
     #dieAnimState = 0;
     #dieAnimTimer = 0;
 
-    static bloodImg = Object.assign(new Image(), { src: "assets/blood_sheet.png" });
+    static bloodImg = Object.assign(new Image(), { src: "assets/blood_sheet.webp" });
     static bloodSize = { w: 16, h: 16 };
     static defaultBloodAnimTimer = 8 / 60;
     static maxBloodAnimState = 3;
@@ -528,7 +528,7 @@ export class Fighter {
             this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
 
-            this.#engine.PlaySound(0 + Math.round(Math.random()));
+            this.#engine.PlaySound(0 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
         }
     }
 
@@ -574,7 +574,7 @@ export class Fighter {
 
         if (this.#engine.gameMode !== "VERSUS_CLIENT") this.#health -= damage;
 
-        this.#engine.PlaySound(2 + Math.round(Math.random()));
+        this.#engine.PlaySound(2 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
 
         this.#punchAnimState = -1;
 
