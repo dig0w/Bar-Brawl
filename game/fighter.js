@@ -270,6 +270,8 @@ export class Fighter {
                         if (intersected) {
                             this.#punchHasHit = true;
 
+                            this.#engine.PlaySound(3 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
+
                             opponent.TakeDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0)}, Number(this.#vel.x.toFixed(2)));
                             break;
                         }
@@ -528,7 +530,7 @@ export class Fighter {
             this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
 
-            this.#engine.PlaySound(0 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
+            this.#engine.PlaySound(1 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
         }
     }
 
@@ -568,13 +570,15 @@ export class Fighter {
         if (this.isBlocking == 1) {
             damage *= 0.2;
             knockback = knockback * 0.4;
+
+            this.#engine.PlaySound(4 + Math.round(Math.random()), 0.9 + Math.random() * 0.2, .5);
+        } else {
+            this.#engine.PlaySound(4 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
         }
 
         this.SetHitReport(hitboxIndex, hitPoint, hitSpeed);
 
         if (this.#engine.gameMode !== "VERSUS_CLIENT") this.#health -= damage;
-
-        this.#engine.PlaySound(2 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
 
         this.#punchAnimState = -1;
 

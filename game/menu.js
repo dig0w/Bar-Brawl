@@ -182,7 +182,7 @@ export class Menu {
             this.#engine.canvas.style.cursor = "default";
         }
 
-        if (oldSelected != this.#selectedIndex) this.#engine.PlaySound(4, 0.9 + Math.random() * 0.2);
+        if (oldSelected != this.#selectedIndex) this.#engine.PlaySound(0, 0.9 + Math.random() * 0.2);
 
         if (this.#copyTimer > 0) this.#copyTimer -= deltaTime;
     }
@@ -192,7 +192,7 @@ export class Menu {
 
         const choice = this.#options[this.#selectedIndex];
 
-        this.#engine.PlaySound(4, 0.9 + Math.random() * 0.2);
+        this.#engine.PlaySound(0, 1.5 + Math.random() * 0.2);
 
         switch (choice) {
             case "START":

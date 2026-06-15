@@ -71,15 +71,15 @@ To do:
     [ ] Sound Effects (Chiptone (by sfbgames), jsfxr / bfxr, OpenGameArt.org, Sonniss (The Archive), Freesound.org)
         [x] Punch 1
         [x] Punch 2
-        [ ] Hit 1
-        [ ] Hit 2
+        [x] Hit 1
+        [x] Hit 2
         [x] Groan 1
         [x] Groan 2
-        [ ] Block 1
-        [ ] Block 2
+            [ ] Based on damage/speed
         [x] UI
-        [ ] Bottle smash
+        [ ] Intro
         [ ] Background noise (esacalates depeding on the bar at round)
+        [ ] Music
         [?] Fight!
         [?] Round (number)
         [?] Player (number) wins!

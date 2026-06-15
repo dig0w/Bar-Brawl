@@ -109,14 +109,16 @@ export class FighterEngine {
 
     #audioCtx = null;
     static soundUrls = [
+        "assets/ui.ogg",
         "assets/punch_1.ogg",
         "assets/punch_2.ogg",
+        "assets/hit_1.ogg",
+        "assets/hit_2.ogg",
         "assets/groan_1.ogg",
         "assets/groan_2.ogg",
-        "assets/ui.ogg",
     ]
     #soundBuffers = [];
-    #volume = .1;
+    #volume = .5;
 
     constructor() { }
 
@@ -779,7 +781,7 @@ export class FighterEngine {
         console.log("All retro sounds decoded directly into memory!");
     }
 
-    PlaySound(index, pitch = 1.0) {
+    PlaySound(index, pitch = 1.0, volume = 1) {
         const buffer = this.#soundBuffers[index];
         if (!buffer) return;
 
@@ -791,7 +793,7 @@ export class FighterEngine {
         source.buffer = buffer;
 
         const gainNode = this.#audioCtx.createGain();
-        gainNode.gain.value = this.#volume;
+        gainNode.gain.value = this.#volume * volume;
 
         source.playbackRate.value = pitch;
 
