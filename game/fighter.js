@@ -527,6 +527,8 @@ export class Fighter {
             this.#punchTimer = 0;
             this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
+
+            this.#engine.PlaySound(0 + Math.round(Math.random()));
         }
     }
 
@@ -571,6 +573,8 @@ export class Fighter {
         this.SetHitReport(hitboxIndex, hitPoint, hitSpeed);
 
         if (this.#engine.gameMode !== "VERSUS_CLIENT") this.#health -= damage;
+
+        this.#engine.PlaySound(2 + Math.round(Math.random()));
 
         this.#punchAnimState = -1;
 

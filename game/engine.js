@@ -107,6 +107,15 @@ export class FighterEngine {
     #fadeTimer = 0;
     #fadeDirection = 0; // 1 = fade to, -1 = fade from, 0 = none
 
+    #sounds = [
+        new Audio("assets/punch_1.wav"),
+        new Audio("assets/punch_2.wav"),
+        new Audio("assets/groan_1.wav"),
+        new Audio("assets/groan_2.wav"),
+        new Audio("assets/ui.wav"),
+    ]
+    #volume = .1;
+
     constructor() { }
 
     get gameState() { return this.#gameState; }
@@ -748,6 +757,17 @@ export class FighterEngine {
         this.#mainMenu.fadeDirection = 1;
         await FighterEngine.wait(Menu.defaultFadeTimer * 1000);
         this.SetGameState(this.#prevGameState);
+    }
+
+    PlaySound(index, pitch = 1.0) {
+        if (!this.#sounds[index]) return;
+
+        console.log("Playing sound at index: ", index);
+
+        const soundClone = this.#sounds[index].cloneNode(true);
+        soundClone.volume = this.#volume;
+        soundClone.playbackRate = pitch;
+        soundClone.play();
     }
 
 

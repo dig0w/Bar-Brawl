@@ -141,6 +141,8 @@ export class Menu {
 
         this.#pollGamepad();
 
+        let oldSelected = this.#selectedIndex;
+
         if (this.#isPressed("ArrowUp", "UP")) {
             this.#selectedIndex = (this.#selectedIndex - 1 + this.#options.length) % this.#options.length;
         }
@@ -180,6 +182,8 @@ export class Menu {
             this.#engine.canvas.style.cursor = "default";
         }
 
+        if (oldSelected != this.#selectedIndex) this.#engine.PlaySound(4, 0.9 + Math.random() * 0.2);
+
         if (this.#copyTimer > 0) this.#copyTimer -= deltaTime;
     }
 
@@ -187,6 +191,8 @@ export class Menu {
         if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
 
         const choice = this.#options[this.#selectedIndex];
+
+        // this.#engine.PlaySound(4, 0.9 + Math.random() * 0.2);
 
         switch (choice) {
             case "START":
