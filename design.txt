@@ -68,7 +68,7 @@ To do:
         [x] Bar at round 3
         [x] Animate
     [x] Credits
-    [ ] Sound Effects (Chiptone (by sfbgames), jsfxr / bfxr, OpenGameArt.org, Sonniss (The Archive), Freesound.org)
+    [ ] Sound Effects (Chiptone (by sfbgames), jsfxr / bfxr, OpenGameArt.org, Sonniss (The Archive), Freesound.org) max * (7/3)
         [x] Punch 1
         [x] Punch 2
         [x] Hit 1
