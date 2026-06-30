@@ -17,16 +17,16 @@ export class Menu {
     static logoImage = Object.assign(new Image(), { src: "assets/logo.png" });
 
     static menusOptions = [
-        ["START", "VERSUS", "OPTIONS"],
+        ["START", "VERSUS"],
         ["LOCAL", "ONLINE", "BACK"],
         ["HOST", "JOIN", "BACK"],
         ["cCODE", "BACK"],
         ["iCODE", "BACK"],
         ["AAA", "BBB", "CCC", "BACK"],
-        ["RESUME", "OPTIONS", "QUIT"],
+        ["RESUME", "QUIT"],
     ];
     #menuIndex = 0;
-    #options = ["START", "VERSUS", "OPTIONS"];
+    #options = ["START", "VERSUS"];
     #selectedIndex = 0;
     #canSelect = true;
 
@@ -194,9 +194,6 @@ export class Menu {
                 break;
             case "VERSUS":
                 this.ToMenu(1);
-                break;
-            case "OPTIONS":
-                this.ToMenu(5);
                 break;
             case "LOCAL":
                 this.StartGame(1);
