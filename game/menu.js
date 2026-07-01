@@ -248,7 +248,6 @@ export class Menu {
 
         if (this.#engine.gameState === "MENU") {
             ctx.drawImage(Menu.logoImage, this.#optionsXpos - Menu.logoImage.width / 2, (this.#engine.canvas.height / 4) - Menu.logoImage.height / 2);
-            // this.#engine.DrawPixelText(ctx, "Crazy Title!", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiFightFillColor, FighterEngine.uiFightOutlineColor);
         }
         if (this.#engine.gameState === "PAUSED" && !this.#engine.isOnline) this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
 

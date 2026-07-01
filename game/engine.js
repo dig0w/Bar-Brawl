@@ -45,9 +45,12 @@ export class FighterEngine {
     static maxIntroState = 18;
     #introState = 0;
 
-    static serverURL = "http://localhost:3000";
+    static signalingURL = "https://cqawfcgolofiaudqacrg.supabase.co";
+    static signalingKey = "sb_publishable_frZwSlAoGpeiFaZAxODyVw_kTyvDhZU";
     #sessionCode;
-    #socket;
+    #myId = Math.random().toString(36).substring(2, 9);
+    #signaling;
+    #channel;
     #peer;
     static networkTick = 32;
     static networkTickRate = 1 / FighterEngine.networkTick;
@@ -555,7 +558,7 @@ export class FighterEngine {
             case "MENU":
                 this.#gameState = "MENU";
 
-                if (this.#peer || this.#socket) this.Disconnect();
+                if (this.#peer || this.#channel) this.Disconnect();
 
                 this.#mainMenu.Reset();
                 this.#fighter0.Reset();
@@ -753,33 +756,59 @@ export class FighterEngine {
 
     get sessionCode() { return this.#sessionCode; }
 
-    #connectSignaling(callback) {
-        if (this.#socket) return;
-        this.#socket = io(FighterEngine.serverURL);
+    #connectSignaling(roomCode, callback) {
+        if (this.#channel) return;
 
-        this.#socket.on("connect", callback);
+        if (!this.#signaling) {
+            this.#signaling = window.supabase.createClient(
+                FighterEngine.signalingURL,
+                FighterEngine.signalingKey
+            );
+        }
 
-        this.#socket.on("signal", data => {
-            if (this.#peer && !this.#peer.destroyed) {
+        this.#channel = this.#signaling.channel(`room:${roomCode}`, {
+            config: { broadcast: { self: false } }
+        });
+
+        this.#channel.on("broadcast", { event: "signal" }, payload => {
+            const data = payload.payload;
+            if (data.to === this.#myId && this.#peer && !this.#peer.destroyed) {
                 this.#peer.signal(data.signal);
             }
         });
 
-        this.#socket.on("disconnect", () => {
-            if (!this.#peer?.connected) this.Disconnect();
+        this.#channel.subscribe((status) => {
+            if (status === "SUBSCRIBED" && typeof callback === "function") {
+                callback();
+            }
         });
+    }
+
+    #closeSignaling() {
+        if (this.#channel) {
+            this.#signaling.removeChannel(this.#channel);
+            this.#channel = null;
+            console.log("Supabase signaling web sockets cleanly closed.");
+        }
     }
 
     #initPeer(initiator, targetId, gameStateMode) {
         const p = new SimplePeer({ initiator, trickle: false });
 
         p.on("signal", signal => {
-            this.#socket.emit("signal", { to: targetId, signal });
+            if (this.#channel) {
+                this.#channel.send({
+                    type: "broadcast",
+                    event: "signal",
+                    payload: { to: targetId, from: this.#myId, signal }
+                });
+            }
             console.log("signal p");
         });
 
         p.on("connect", () => {
             console.log("connect p");
+            this.#closeSignaling();
             this.#mainMenu.StartGame(gameStateMode);
         });
 
@@ -814,27 +843,42 @@ export class FighterEngine {
     }
 
     async Host() {
-        this.#connectSignaling(() => this.#socket.emit("create-session"));
+        const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+        this.#sessionCode = code;
 
-        this.#socket.on("session-created", code => this.#sessionCode = code);
+        this.#connectSignaling(code, () => {
+            console.log("Host room established successfully via channel code:", code);
 
-        this.#socket.on("player-joined", playerId => {
-            this.#initPeer(true, playerId, 2);
+            this.#channel.on("broadcast", { event: "player-joined" }, payload => {
+                const guestId = payload.payload.id;
+                console.log("Challenger checked in:", guestId);
+                this.#initPeer(true, guestId, 2);
+            });
         });
     }
 
     async Join(code) {
         if (!code) return;
-        this.#connectSignaling(() => this.#socket.emit("join-session", code));
 
-        this.#socket.once("signal", data => {
-            if (!this.#peer) {
-                const p = this.#initPeer(false, data.from, 3);
-                p.signal(data.signal);
+        this.#connectSignaling(code, () => {
+            console.log("Successfully connected to room:", code);
 
-                this.#socket.on("signal", d => p.signal(d.signal));
-            }
+            this.#channel.on("broadcast", { event: "signal" }, payload => {
+                const data = payload.payload;
+                if (data.to === this.#myId && !this.#peer) {
+                    const p = this.#initPeer(false, data.from, 3);
+                    p.signal(data.signal);
+                }
+            });
+
+            this.#channel.send({
+                type: "broadcast",
+                event: "player-joined",
+                payload: { id: this.#myId }
+            });
         });
+
+        this.#connectSignaling(() => this.#signaling.emit("join-session", code));
     }
 
     Disconnect() {
@@ -843,12 +887,7 @@ export class FighterEngine {
             this.#peer = null;
         }
 
-        if (this.#socket) {
-            this.#socket.off("signal");
-            this.#socket.off("player-joined");
-            this.#socket.disconnect();
-            this.#socket = null;
-        }
+        this.#closeSignaling();
 
         this.#sessionCode = null;
         this.SetGameState(0, 0);
@@ -936,8 +975,8 @@ export class FighterEngine {
 
             console.log("Loading multiplayer network libraries...");
 
-            const socketScript = document.createElement("script");
-            socketScript.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
+            const signalingScript = document.createElement("script");
+            signalingScript.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
             const peerScript = document.createElement("script");
             peerScript.src = "https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js";
@@ -951,13 +990,13 @@ export class FighterEngine {
                 }
             };
 
-            socketScript.onload = onScriptLoad;
+            signalingScript.onload = onScriptLoad;
             peerScript.onload = onScriptLoad;
 
-            socketScript.onerror = reject;
+            signalingScript.onerror = reject;
             peerScript.onerror = reject;
 
-            document.head.appendChild(socketScript);
+            document.head.appendChild(signalingScript);
             document.head.appendChild(peerScript);
         });
     }
@@ -986,6 +1025,7 @@ export class FighterEngine {
         FighterEngine.tCanvas.width = outSize.w;
         FighterEngine.tCanvas.height = outSize.h;
         FighterEngine.tCtx.imageSmoothingEnabled = false;
+        ctx.imageSmoothingEnabled = false;
 
         for (let i = 0; i < text.length; i++) {
             if (i != 0) currentX += spacing;
@@ -1022,7 +1062,7 @@ export class FighterEngine {
                 FighterEngine.tCtx.fillStyle = color;
                 FighterEngine.tCtx.fillRect(0, 0, outSize.w, outSize.h);
 
-                ctx.drawImage(FighterEngine.tCanvas, currentX, (y | 0));
+                ctx.drawImage(FighterEngine.tCanvas, (currentX | 0), (y | 0));
             };
             
             drawLayer(this.#greenFontSheet, fillColor);
@@ -1067,7 +1107,7 @@ export class FighterEngine {
         for (let i = 0; i < data.length; i += 4) {
             const value = data[i + ch];
 
-            if (value > 0) {
+            if (value > 127) {
                 data[i] = 255;
                 data[i + 1] = 255;
                 data[i + 2] = 255;
@@ -1076,6 +1116,8 @@ export class FighterEngine {
                 data[i + 3] = 0;
             }
         }
+
+        console.log(imgData)
 
         ctx.putImageData(imgData, 0, 0);
 

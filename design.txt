@@ -147,6 +147,7 @@ To do:
         [x] Use web worker to keep game running when on Versus Online
         [x] Download multiplayer libraries only when needed
 
+    [ ] Fix text on firefox
 
 Issue:
     Client (Dogo) had die animation but still alive, after loosing round 1 and punching Host (mewy) hard
