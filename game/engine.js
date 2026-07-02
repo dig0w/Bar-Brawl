@@ -165,6 +165,17 @@ export class FighterEngine {
         window.onbeforeunload = () => {
             this.Disconnect();
         };
+
+        const handleAutoPause = () => {
+            if (!this.isOnline && !this.#gamePaused && this.#gameState !== "MENU") {
+                this.Pause();
+            }
+        };
+
+        window.addEventListener("blur", handleAutoPause);
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) handleAutoPause();
+        });
     }
 
     Tick(deltaTime) {

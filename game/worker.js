@@ -1,20 +1,15 @@
 let intervalId = null;
-let lastTime = 0;
 
 self.onmessage = function(e) {
     if (e.data.action === "START") {
         if (intervalId) clearInterval(intervalId);
 
-        lastTime = performance.now();
+        const tickDelay = 1000 / (e.data.tickRate || 60);
 
         intervalId = setInterval(() => {
-            const now = performance.now();
-            const deltaTime = (now - lastTime) / 1000;
-            lastTime = now;
-
-            self.postMessage({ action: "TICK", deltaTime: deltaTime });
-        }, 1000 / (e.data.tickRate || 32));
-    } 
+            self.postMessage({ action: "TICK" });
+        }, tickDelay);
+    }
 
     if (e.data.action === "STOP") {
         if (intervalId) {
