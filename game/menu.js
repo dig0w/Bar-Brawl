@@ -137,7 +137,7 @@ export class Menu {
             if (this.fadeTimer < 0) this.fadeTimer = 0;
         }
 
-        if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
+        if ((this.#engine.gameState !== "MENU" && !this.#engine.gamePaused) || !this.#canSelect) return;
 
         this.#pollGamepad();
 
@@ -184,7 +184,7 @@ export class Menu {
     }
 
     #handleSelection() {
-        if ((this.#engine.gameState !== "MENU" && this.#engine.gameState !== "PAUSED") || !this.#canSelect) return;
+        if ((this.#engine.gameState !== "MENU" && !this.#engine.gamePaused) || !this.#canSelect) return;
 
         const choice = this.#options[this.#selectedIndex];
 
@@ -249,7 +249,7 @@ export class Menu {
         if (this.#engine.gameState === "MENU") {
             ctx.drawImage(Menu.logoImage, this.#optionsXpos - Menu.logoImage.width / 2, (this.#engine.canvas.height / 4) - Menu.logoImage.height / 2);
         }
-        if (this.#engine.gameState === "PAUSED" && !this.#engine.isOnline) this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
+        if (this.#engine.gamePaused && !this.#engine.isOnline) this.#engine.DrawPixelText(ctx, "Paused", this.#optionsXpos, (this.#engine.canvas.height / 4), 16, FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
 
         this.#options.forEach((text, i) => {
             const isSelected = i === this.#selectedIndex;
@@ -313,7 +313,7 @@ export class Menu {
                 return;
                 break;
             default:
-                if (this.#engine.gameState === "PAUSED") i = 6;
+                if (this.#engine.gamePaused) i = 6;
                 else i = 0;
                 break;
         }

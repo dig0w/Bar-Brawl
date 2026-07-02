@@ -222,6 +222,7 @@ export class Fighter {
 
         // Body Animation
         this.#bodyAnimTimer -= deltaTime;
+        // console.log("asd", this.#bodyAnimTimer, deltaTime);
         if (this.#bodyAnimTimer <= 0) {
             this.#bodyAnimState = (this.#bodyAnimState == Fighter.maxBodyAnimState - 1 && Math.random() > .9) ? 2 : (this.#bodyAnimState + 1) % Fighter.maxBodyAnimState;
             this.#bodyAnimTimer += Fighter.defaultBodyAnimTimer;
@@ -443,7 +444,7 @@ export class Fighter {
     }
 
     DrawUI(ctx) {
-        if (this.#engine.gameState != "PRE_ROUND" && this.#engine.gameState != "FIGHTING" && this.#engine.gameState != "POS_ROUND" && this.#engine.gameState != "PAUSED") return;
+        if (this.#engine.gameState != "PRE_ROUND" && this.#engine.gameState != "FIGHTING" && this.#engine.gameState != "POS_ROUND") return;
 
         const isVariantZero = this.#variant == 0;
 

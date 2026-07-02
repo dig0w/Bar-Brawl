@@ -75,13 +75,13 @@ export class AIController {
             blocking = false;
         } else if (this.#blockDuration > 0 && this.#reactionTimer <= 0) {
             // Defending
-            blocking = isInRange && (this.difficulty === 1 || Math.random() < this.#blockChance);
+            blocking = isInRange && (this.#difficulty === 1 || Math.random() < this.#blockChance);
             move = 0;
         } else if (shouldBait) {
             // Baiting
             move = (oppX < myX) ? 1 : -1;
             blocking = false;
-        } else if (this.difficulty === 1 || Math.random() >= this.#missChance) {
+        } else if (this.#difficulty === 1 || Math.random() >= this.#missChance) {
             // Attacking
             move = (oppX < myX) ? -1 : 1;
 

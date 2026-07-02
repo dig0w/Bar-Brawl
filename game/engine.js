@@ -30,9 +30,9 @@ export class FighterEngine {
     #ctrl0 = null;
     #ctrl1 = null;
 
-    #gameMode;
     #gameState;
-    #prevGameState;
+    #gameMode;
+    #gamePaused = false;
     static maxRounds = 3;
     #rounds = 0;
     #scoreF0 = 0;
@@ -114,6 +114,7 @@ export class FighterEngine {
 
     get gameState() { return this.#gameState; }
     get gameMode() { return this.#gameMode; }
+    get gamePaused() { return this.#gamePaused; }
 
     get gravity() { return FighterEngine.gravity; }
     get friction() { return FighterEngine.friction; }
@@ -181,9 +182,9 @@ export class FighterEngine {
                 this.#timeScale = 1;
             }
         }
-        const activeDeltaTime = deltaTime * (this.#gameState === "PAUSED" && !this.isOnline ? 0 : this.#timeScale);
+        const activeDeltaTime = deltaTime * (this.#gamePaused && !this.isOnline ? 0 : this.#timeScale);
 
-        if (this.#gameState === "MENU" || this.#gameState === "PAUSED") {
+        if (this.#gameState === "MENU" || this.#gamePaused) {
             this.#mainMenu.Tick(deltaTime);
         }
 
@@ -254,7 +255,7 @@ export class FighterEngine {
         }
 
         // Bar Animation
-        this.#barAnimTimer -= deltaTime;
+        this.#barAnimTimer -= activeDeltaTime;
         if (this.#barAnimTimer <= 0) {
             this.#barAnimState = (this.#barAnimState == FighterEngine.maxBarAnimState - 1 && Math.random() > .6) ? 2 : (this.#barAnimState + 1) % FighterEngine.maxBarAnimState;
             this.#barAnimTimer += FighterEngine.defaultBarAnimTimer;
@@ -262,7 +263,7 @@ export class FighterEngine {
 
         // Intro
         if (this.#gameState === "INTRO") {
-            this.#introTimer += deltaTime;
+            this.#introTimer += activeDeltaTime;
 
             const currentFrameMaxTime = FighterEngine.frameStamp[this.#introState];
 
@@ -287,11 +288,11 @@ export class FighterEngine {
         }
 
         if (this.#uiGameOverTimer > 0) {
-            this.#uiGameOverTimer -= deltaTime;
+            this.#uiGameOverTimer -= activeDeltaTime;
         }
 
         if (this.#uiCreditsTimer > 0) {
-            this.#uiCreditsTimer -= deltaTime;
+            this.#uiCreditsTimer -= activeDeltaTime;
 
             if (this.#uiCreditsTimer <= 0) {
                 this.SetGameState(0);
@@ -300,14 +301,14 @@ export class FighterEngine {
         }
 
         if (this.#uiRoundTimer > 0) {
-            this.#uiRoundTimer -= deltaTime;
+            this.#uiRoundTimer -= activeDeltaTime;
 
             if (this.#uiRoundTimer <= 0) {
                 this.#uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
             }
         }
         if (this.#uiRoundAfterTimer > 0) {
-            this.#uiRoundAfterTimer -= deltaTime;
+            this.#uiRoundAfterTimer -= activeDeltaTime;
 
             if (this.#uiRoundAfterTimer <= 0) {
                 this.#uiFightTimer = FighterEngine.defaultUiFightTimer;
@@ -315,7 +316,7 @@ export class FighterEngine {
             }
         }
         if (this.#uiFightTimer > 0) {
-            this.#uiFightTimer -= deltaTime;
+            this.#uiFightTimer -= activeDeltaTime;
 
             if (this.#uiFightTimer <= FighterEngine.defaultUiFightTimer / 3 && !this.#uiFightDone) {
                 this.#uiFightDone = true;
@@ -324,12 +325,12 @@ export class FighterEngine {
         }
 
         if (this.#uiWinnerTimer > 0) {
-            this.#uiWinnerTimer -= deltaTime;
+            this.#uiWinnerTimer -= activeDeltaTime;
         }
 
 
         if (this.#shakeTimer > 0) {
-            this.#shakeTimer -= deltaTime;
+            this.#shakeTimer -= activeDeltaTime;
 
             if (this.#shakeTimer <= 0) {
                 this.#shakeTimer = 0;
@@ -345,7 +346,7 @@ export class FighterEngine {
         }
 
         if (this.#fadeDirection !== 0) {
-            this.#fadeTimer += deltaTime;
+            this.#fadeTimer += activeDeltaTime;
 
             const dir = this.#fadeDirection;
 
@@ -527,7 +528,7 @@ export class FighterEngine {
             this.DrawPixelText(this.#ctx, this.#uiWinnerText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiWinnerFillColor, FighterEngine.uiWinnerOutlineColor);
         }
 
-        if (this.#gameState === "MENU" || this.#gameState === "PAUSED") {
+        if (this.#gameState === "MENU" || this.#gamePaused) {
             this.#mainMenu.Draw(this.#ctx);
         }
 
@@ -551,12 +552,13 @@ export class FighterEngine {
     }
 
     SetGameState(state, mode = -1) {
-        // States = MENU INTRO PRE_ROUND FIGHTING POS_ROUND GAME_OVER PAUSED
+        // States = MENU INTRO PRE_ROUND FIGHTING POS_ROUND GAME_OVER CREDITS
         // Modes = CAREER VERSUS_LOCAL VERSUS_HOST VERSUS_CLIENT
         switch (state) {
             case 0:
             case "MENU":
                 this.#gameState = "MENU";
+                this.#gamePaused = false;
 
                 if (this.#peer || this.#channel) this.Disconnect();
 
@@ -606,16 +608,6 @@ export class FighterEngine {
                 this.#canvas.style.cursor = "none";
                 break;
             case 6:
-            case "PAUSED":
-                this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
-                this.#mainMenu.fadeDirection = -1;
-
-                this.#prevGameState = this.#gameState;
-                this.#gameState = "PAUSED";
-                this.#mainMenu.Reset();
-                this.#mainMenu.ToMenu(6);
-                break;
-            case 7:
             case "CREDITS":
                 this.#gameState = "CREDITS";
 
@@ -632,14 +624,12 @@ export class FighterEngine {
 
             switch (mode) {
                 case 0:
-                case "CAREER":
-                    this.#gameMode = "CAREER";
+                case "MAIN":
+                    this.#gameMode = "MAIN";
 
                     this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
-                    // this.#ctrl0 = new AIController(this, this.#fighter0, 1);
                     this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new AIController(this, this.#fighter1, .8);
-                    // this.#ctrl1 = new Controller(this, this.#fighter1, 2, 0);
                     this.#objects.push(this.#ctrl1);
                     break;
                 case 1:
@@ -682,7 +672,7 @@ export class FighterEngine {
     }
 
     StartRound() {
-        if (this.#rounds == FighterEngine.maxRounds || ((this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) && this.#gameMode !== "CAREER")) {
+        if (this.#rounds == FighterEngine.maxRounds || ((this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) && this.#gameMode !== "MAIN")) {
             return this.GameOver();
         }
 
@@ -692,7 +682,7 @@ export class FighterEngine {
         this.#uiRoundTimer = FighterEngine.defaultUiRoundTimer;
         this.#uiRoundText = `Round ${this.#rounds + 1}`;
 
-        if (this.#gameMode === "CAREER") this.#barFrame = this.#rounds;
+        if (this.#gameMode === "MAIN") this.#barFrame = this.#rounds;
 
         this.#rounds++;
     }
@@ -739,18 +729,28 @@ export class FighterEngine {
         await FighterEngine.wait(4000);
         this.Fade("#000", 500);
         await FighterEngine.wait(1200);
-        if (this.#gameMode !== "CAREER") this.SetGameState(0);
-        else this.SetGameState(7);
+        if (this.#gameMode !== "MAIN") this.SetGameState(0);
+        else this.SetGameState(6);
         if (this.isOnline) this.Disconnect();
 
         this.Fade("#000", 500, -1);
+    }
+
+    Pause() {
+        this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
+        this.#mainMenu.fadeDirection = -1;
+
+        this.#gamePaused = true;
+        this.#mainMenu.Reset();
+        this.#mainMenu.ToMenu(6);
     }
 
     async Resume() {
         this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
         this.#mainMenu.fadeDirection = 1;
         await FighterEngine.wait(Menu.defaultFadeTimer * 1000);
-        this.SetGameState(this.#prevGameState);
+
+        this.#gamePaused = false;
     }
 
 
@@ -832,7 +832,10 @@ export class FighterEngine {
             }
         });
 
-        p.on("close", () => this.Disconnect());
+        p.on("close", () => {
+            console.log("close p");
+            this.Disconnect();
+        });
         p.on("error", (a) => {
             console.log("error p", a);
             this.Disconnect();
@@ -1116,8 +1119,6 @@ export class FighterEngine {
                 data[i + 3] = 0;
             }
         }
-
-        console.log(imgData)
 
         ctx.putImageData(imgData, 0, 0);
 

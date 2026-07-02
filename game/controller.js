@@ -77,8 +77,6 @@ export class Controller {
     }
 
     Tick(deltaTime) {
-        if (!(this.#engine.gameState === "FIGHTING" || (this.#engine.gameState === "PAUSED" && this.#engine.isOnline && this.#remote))) return;
-
         if (!this.#remote) {
             switch (this.#variant) {
                 case 0:
@@ -109,6 +107,22 @@ export class Controller {
             this.#pollGamepad();
         }
 
+        if (this.inputs.Pause && this.#pauseReleased) {
+            this.#pauseReleased = false;
+
+            if (!(this.#engine.gameMode === "VERSUS_LOCAL" && this.#variant == 1)) {
+                if (this.#engine.gamePaused) {
+                    this.#engine.Resume();
+                } else {
+                    this.#engine.Pause();
+                }
+            }
+        } else if (!this.inputs.Pause) {
+            this.#pauseReleased = true;
+        }
+
+        if (!(this.#engine.gameState === "FIGHTING" || (this.#engine.gamePaused && this.#engine.isOnline && this.#remote))) return;
+
         let moveDir = 0;
         if (this.inputs.MoveLeft) moveDir -= 1;
         if (this.inputs.MoveRight) moveDir += 1;
@@ -132,13 +146,6 @@ export class Controller {
 
         if (this.inputs.Punch) this.#networkLatch |= 1;
         if (this.inputs.Block) this.#networkLatch |= 2;
-
-        if (this.inputs.Pause && this.#pauseReleased) {
-            this.#pauseReleased = false;
-            this.#engine.SetGameState(6);
-        } else if (!this.inputs.Pause) {
-            this.#pauseReleased = true;
-        }
     }
 
     Draw(ctx) { }
