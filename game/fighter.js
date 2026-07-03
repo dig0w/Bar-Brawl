@@ -222,7 +222,6 @@ export class Fighter {
 
         // Body Animation
         this.#bodyAnimTimer -= deltaTime;
-        // console.log("asd", this.#bodyAnimTimer, deltaTime);
         if (this.#bodyAnimTimer <= 0) {
             this.#bodyAnimState = (this.#bodyAnimState == Fighter.maxBodyAnimState - 1 && Math.random() > .9) ? 2 : (this.#bodyAnimState + 1) % Fighter.maxBodyAnimState;
             this.#bodyAnimTimer += Fighter.defaultBodyAnimTimer;
@@ -250,7 +249,7 @@ export class Fighter {
                 }
             }
 
-            if (!this.#punchHasHit && (this.#engine.isOnline ? this.#engine.isFighterLocal(this) : true)) {
+            if (!this.#punchHasHit) {
                 this.#punchTimer += deltaTime;
                 if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
                     const percent = (this.#punchTimer - this.#startPunchTrace) / (this.#endPunchTrace - this.#startPunchTrace);
@@ -569,9 +568,8 @@ export class Fighter {
             knockback = knockback * 0.4;
         }
 
-        this.SetHitReport(hitboxIndex, hitPoint, hitSpeed);
-
-        if (this.#engine.gameMode !== "VERSUS_CLIENT") this.#health -= damage;
+        this.#health -= damage;
+        console.log(this.#health);
 
         this.#punchAnimState = -1;
 
@@ -640,37 +638,6 @@ export class Fighter {
         this.#punchAnimState = -1;
         this.#isBlocking = false;
         this.#celebrating = false;
-
-        this.GetHitReport();
-    }
-
-
-    GetNetworkState() {
-        return {
-            x: (this.#loc.x | 0),
-            y: (this.#loc.y | 0),
-            vx: Number(this.#vel.x.toFixed(2)),
-            vy: Number(this.#vel.y.toFixed(2)),
-        };
-    }
-
-    SetNetworkState(state) {
-        if (state.x !== undefined) this.#loc.x = state.x;
-        if (state.y !== undefined) this.#loc.y = state.y;
-        if (state.vx !== undefined) this.#vel.x = state.vx;
-        if (state.vy !== undefined) this.#vel.y = state.vy;
-
-        if (state.hp !== undefined) this.#health = state.hp;
-    }
-
-    GetHitReport() {
-        const report = this.#networkHitReport;
-        this.#networkHitReport = null;
-        return report;
-    }
-
-    SetHitReport(hitboxIndex, hitPoint, hitSpeed) {
-        this.#networkHitReport = { i: hitboxIndex, p: { x: (hitPoint.x | 0), y: (hitPoint.y | 0)}, s: Number(hitSpeed.toFixed(2)) };
     }
 
 

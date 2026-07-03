@@ -325,8 +325,13 @@ export class Menu {
         this.#canSelect = false;
 
         await FighterEngine.wait(400);
+        if (this.#canSelect) return;
         this.#engine.Fade("#000", 500);
         await FighterEngine.wait(1200);
+        if (this.#canSelect) {
+            this.Fade("#000", 0, -1);
+            return;
+        }
         this.#engine.SetGameState(state, mode);
 
         this.#engine.Fade("#000", 500, -1);

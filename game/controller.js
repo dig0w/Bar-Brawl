@@ -13,16 +13,10 @@ export class Controller {
     #punchReleased = true;
     #pauseReleased = true;
 
-    inputs = {
-        "MoveLeft": false,
-        "MoveRight": false,
-        "Jump": false,
-        "Punch": false,
-        "Block": false,
-        "Pause": false
-    };
+    #inputs = { "MoveLeft": false, "MoveRight": false, "Jump": false, "Punch": false, "Block": false, "Pause": false };
 
-    #networkLatch = 0;
+    static delayFrames = 3;
+    #inputQueue = new Map();
 
     constructor(engine, pawn, variant = 0, gamepadIndex = -1, remote = false) {
         if (!(engine instanceof FighterEngine))
@@ -60,92 +54,115 @@ export class Controller {
 
         const leftStickX = axes[0];
 
-        this.inputs.MoveLeft ||= (leftStickX < -deadzone || buttons[14]?.pressed);
-        this.inputs.MoveRight ||= (leftStickX > deadzone || buttons[15]?.pressed);
+        this.#inputs.MoveLeft ||= (leftStickX < -deadzone || buttons[14]?.pressed);
+        this.#inputs.MoveRight ||= (leftStickX > deadzone || buttons[15]?.pressed);
 
         // Jump: Up on D-Pad/Stick OR the Bottom Button (A/X)
-        this.inputs.Jump ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
+        this.#inputs.Jump ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
 
         // Punch: West Button (X on Xbox, Square on PS)
-        this.inputs.Punch ||= buttons[2].pressed;
+        this.#inputs.Punch ||= buttons[2].pressed;
 
         // Block: Shoulders (L1/R1) or Triggers
-        this.inputs.Block ||= (buttons[4].pressed || buttons[5].pressed || buttons[6].pressed || buttons[7].pressed);
+        this.#inputs.Block ||= (buttons[4].pressed || buttons[5].pressed || buttons[6].pressed || buttons[7].pressed);
 
         // Pause: Start button
-        this.inputs.Pause ||= buttons[9].pressed;
+        this.#inputs.Pause ||= buttons[9].pressed;
     }
 
-    Tick(deltaTime) {
-        if (!this.#remote) {
-            switch (this.#variant) {
-                case 0:
-                    this.inputs.MoveLeft = this.#keys["KeyA"];
-                    this.inputs.MoveRight = this.#keys["KeyD"];
-                    this.inputs.Jump = this.#keys["KeyW"];
-                    this.inputs.Punch = this.#keys["KeyR"];
-                    this.inputs.Block = this.#keys["KeyT"];
-                    break;
-                case 1:
-                    this.inputs.MoveLeft = this.#keys["ArrowLeft"];
-                    this.inputs.MoveRight = this.#keys["ArrowRight"];
-                    this.inputs.Jump = this.#keys["ArrowUp"];
-                    this.inputs.Punch = this.#keys["KeyK"];
-                    this.inputs.Block = this.#keys["KeyL"];
-                    break;
-                case 2:
-                    this.inputs.MoveLeft = this.#keys["KeyA"] || this.#keys["ArrowLeft"];
-                    this.inputs.MoveRight = this.#keys["KeyD"] || this.#keys["ArrowRight"];
-                    this.inputs.Jump = this.#keys["KeyW"] || this.#keys["ArrowUp"];
-                    this.inputs.Punch = this.#keys["KeyR"] || this.#keys["KeyK"];
-                    this.inputs.Block = this.#keys["KeyT"] || this.#keys["KeyL"];
-                    break;
-            }
+    ReadInputs() {
+        if (this.#remote) return;
 
-            this.inputs.Pause = this.#keys["Escape"];
-
-            this.#pollGamepad();
+        switch (this.#variant) {
+            case 0:
+                this.#inputs.MoveLeft = this.#keys["KeyA"];
+                this.#inputs.MoveRight = this.#keys["KeyD"];
+                this.#inputs.Jump = this.#keys["KeyW"];
+                this.#inputs.Punch = this.#keys["KeyR"];
+                this.#inputs.Block = this.#keys["KeyT"];
+                break;
+            case 1:
+                this.#inputs.MoveLeft = this.#keys["ArrowLeft"];
+                this.#inputs.MoveRight = this.#keys["ArrowRight"];
+                this.#inputs.Jump = this.#keys["ArrowUp"];
+                this.#inputs.Punch = this.#keys["KeyK"];
+                this.#inputs.Block = this.#keys["KeyL"];
+                break;
+            case 2:
+                this.#inputs.MoveLeft = this.#keys["KeyA"] || this.#keys["ArrowLeft"];
+                this.#inputs.MoveRight = this.#keys["KeyD"] || this.#keys["ArrowRight"];
+                this.#inputs.Jump = this.#keys["KeyW"] || this.#keys["ArrowUp"];
+                this.#inputs.Punch = this.#keys["KeyR"] || this.#keys["KeyK"];
+                this.#inputs.Block = this.#keys["KeyT"] || this.#keys["KeyL"];
+                break;
         }
 
-        if (this.inputs.Pause && this.#pauseReleased) {
-            this.#pauseReleased = false;
+        this.#inputs.Pause = this.#keys["Escape"];
+        this.#pollGamepad();
 
-            if (!(this.#engine.gameMode === "VERSUS_LOCAL" && this.#variant == 1)) {
-                if (this.#engine.gamePaused) {
-                    this.#engine.Resume();
-                } else {
-                    this.#engine.Pause();
-                }
+        if (this.#inputs.Pause && this.#pauseReleased) {
+            this.#pauseReleased = false;
+            if (!(this.#engine.gameMode === "VERSUS_LOCAL" && this.#variant == 1)) { // Avoids both controllers calling
+                if (this.#engine.gamePaused) this.#engine.Resume();
+                else this.#engine.Pause();
             }
-        } else if (!this.inputs.Pause) {
+        } else if (!this.#inputs.Pause) {
             this.#pauseReleased = true;
         }
+    }
 
-        if (!(this.#engine.gameState === "FIGHTING" || (this.#engine.gamePaused && this.#engine.isOnline && this.#remote))) return;
+    GetInputMask() {
+        let mask = 0;
+        if (this.#inputs.MoveLeft) mask |= 1;
+        if (this.#inputs.MoveRight) mask |= 2;
+        if (this.#inputs.Jump) mask |= 4;
+        if (this.#inputs.Punch) mask |= 8;
+        if (this.#inputs.Block) mask |= 16;
+        return mask;
+    }
 
+    ApplyMask(mask) {
         let moveDir = 0;
-        if (this.inputs.MoveLeft) moveDir -= 1;
-        if (this.inputs.MoveRight) moveDir += 1;
+        if ((mask & 1) !== 0) moveDir -= 1;
+        if ((mask & 2) !== 0) moveDir += 1;
         this.#pawn.moveInput = moveDir;
 
-        if (this.inputs.Jump && this.#jumpReleased) {
+        const isJumping = (mask & 4) !== 0;
+        if (isJumping && this.#jumpReleased) {
             this.#jumpReleased = false;
             this.#pawn.Jump();
-        } else if (!this.inputs.Jump) {
+        } else if (!isJumping) {
             this.#jumpReleased = true;
         }
 
-        if (this.inputs.Punch && this.#punchReleased) {
+        const isPunching = (mask & 8) !== 0;
+        if (isPunching && this.#punchReleased) {
             this.#punchReleased = false;
             this.#pawn.Punch();
-        } else if (!this.inputs.Punch) {
+        } else if (!isPunching) {
             this.#punchReleased = true;
         }
 
-        this.#pawn.SetBlocking(this.inputs.Block);
+        this.#pawn.SetBlocking((mask & 16) !== 0);
+    }
 
-        if (this.inputs.Punch) this.#networkLatch |= 1;
-        if (this.inputs.Block) this.#networkLatch |= 2;
+    // Queue Management
+    QueueInput(frame, mask) { this.#inputQueue.set(frame, mask); }
+    GetInputForFrame(frame) { return this.#inputQueue.get(frame); }
+    ClearInput(frame) { this.#inputQueue.delete(frame); }
+    ClearAllInputs() { this.#inputQueue.clear(); }
+
+    // Instant execution for OFFLINE modes
+    Tick(deltaTime) {
+        if (!this.#remote) {
+            this.ReadInputs();
+            if (!(this.#engine.gameState === "FIGHTING" || (this.#engine.gamePaused && this.#engine.isOnline && this.#remote))) {
+                this.#pawn.moveInput = 0;
+                this.#pawn.SetBlocking(false);
+                return;
+            }
+            this.ApplyMask(this.GetInputMask());
+        }
     }
 
     Draw(ctx) { }
@@ -157,16 +174,5 @@ export class Controller {
         this.#pauseReleased = true;
 
         this.#pawn.moveInput = 0;
-    }
-
-    GetInputMask() {
-        const mask = this.#networkLatch;
-        this.#networkLatch = 0; 
-        return mask;
-    }
-
-    SetInputMask(mask) {
-        this.inputs.Punch = (mask & 1) !== 0;
-        this.inputs.Block = (mask & 2) !== 0;
     }
 }

@@ -1,10 +1,9 @@
 import { FighterEngine } from "./game/engine.js";
 
+const fixedDeltaTime = 1 / 60;
+
 const engine = new FighterEngine();
 engine.Begin();
-
-let lastTime = performance.now();
-let bgWorker = new Worker("game/worker.js");
 
 function DrawLoop() {
     engine.Draw();
@@ -13,15 +12,12 @@ function DrawLoop() {
 }
 requestAnimationFrame(DrawLoop);
 
+
+let bgWorker = new Worker("game/worker.js");
+
 bgWorker.onmessage = function (e) {
     if (e.data.action === "TICK") {
-        let now = performance.now();
-        let deltaTime = (now - lastTime) / 1000;
-        lastTime = now;
-
-        if (deltaTime > 0.1) deltaTime = 0.016;
-
-        engine.Tick(deltaTime);
+        engine.Tick(fixedDeltaTime);
     }
 };
 
