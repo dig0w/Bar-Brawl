@@ -12,7 +12,6 @@ export class Fighter {
     #facingRight = true;
 
     #groundY = 0;
-
     #jumpForce = 250;
 
     static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_sheet.png" });
@@ -636,8 +635,12 @@ export class Fighter {
 
         this.moveInput = 0;
         this.#punchAnimState = -1;
+        this.#punchCooldown = 0;
         this.#isBlocking = false;
         this.#celebrating = false;
+        this.#punchedCooldown = 0;
+        this.#dieAnimState = -1;
+        this.#bloodAnimState = -1;
     }
 
 
