@@ -178,14 +178,6 @@ export class FighterEngine {
     }
 
     Tick(deltaTime) {
-        if (this.#timeScaleTimer >= 0 && this.#timeScaleTimer != undefined) {
-            this.#timeScaleTimer -= deltaTime;
-            if (this.#timeScaleTimer <= 0) {
-                this.#timeScale = 1;
-            }
-        }
-        const activeDeltaTime = deltaTime * (this.#gamePaused && !this.isOnline ? 0 : this.#timeScale);
-
         if (this.#gameState === "MENU" || this.#gamePaused) {
             this.#mainMenu.Tick(deltaTime);
         }
@@ -220,8 +212,8 @@ export class FighterEngine {
         } else {
             // Offline Mode: Instantly tick controllers
             if (this.#gameState === "FIGHTING" && !this.#gamePaused) {
-                this.#ctrl0?.Tick(activeDeltaTime);
-                this.#ctrl1?.Tick(activeDeltaTime);
+                this.#ctrl0?.Tick(deltaTime);
+                this.#ctrl1?.Tick(deltaTime);
             } else {
                 // Just read inputs so Pause button still works
                 this.#ctrl0?.ReadInputs();
@@ -230,6 +222,14 @@ export class FighterEngine {
         }
 
         if (!isSimulationLocked) {
+            if (this.#timeScaleTimer >= 0 && this.#timeScaleTimer != undefined) {
+                this.#timeScaleTimer -= deltaTime;
+                if (this.#timeScaleTimer <= 0) {
+                    this.#timeScale = 1;
+                }
+            }
+            const activeDeltaTime = deltaTime * (this.#gamePaused && !this.isOnline ? 0 : this.#timeScale);
+
             // Only tick objects if the simulation is unlocked
             for (let i = this.#objects.length - 1; i >= 0; i--) {
                 const obj = this.#objects[i];
@@ -245,7 +245,7 @@ export class FighterEngine {
         }
 
         // Bar Animation
-        this.#barAnimTimer -= activeDeltaTime;
+        this.#barAnimTimer -= deltaTime;
         if (this.#barAnimTimer <= 0) {
             this.#barAnimState = (this.#barAnimState == FighterEngine.maxBarAnimState - 1 && Math.random() > .6) ? 2 : (this.#barAnimState + 1) % FighterEngine.maxBarAnimState;
             this.#barAnimTimer += FighterEngine.defaultBarAnimTimer;
@@ -253,7 +253,7 @@ export class FighterEngine {
 
         // Intro
         if (this.#gameState === "INTRO") {
-            this.#introTimer += activeDeltaTime;
+            this.#introTimer += deltaTime;
 
             const currentFrameMaxTime = FighterEngine.frameStamp[this.#introState];
 
@@ -278,11 +278,11 @@ export class FighterEngine {
         }
 
         if (this.#uiGameOverTimer > 0 && this.#gameState === "GAME_OVER") {
-            this.#uiGameOverTimer -= activeDeltaTime;
+            this.#uiGameOverTimer -= deltaTime;
         }
 
         if (this.#uiCreditsTimer > 0) {
-            this.#uiCreditsTimer -= activeDeltaTime;
+            this.#uiCreditsTimer -= deltaTime;
 
             if (this.#uiCreditsTimer <= 0) {
                 this.SetGameState(0);
@@ -291,14 +291,14 @@ export class FighterEngine {
         }
 
         if (this.#uiRoundTimer > 0) {
-            this.#uiRoundTimer -= activeDeltaTime;
+            this.#uiRoundTimer -= deltaTime;
 
             if (this.#uiRoundTimer <= 0) {
                 this.#uiRoundAfterTimer = FighterEngine.defaultUiRoundAfterTimer;
             }
         }
         if (this.#uiRoundAfterTimer > 0) {
-            this.#uiRoundAfterTimer -= activeDeltaTime;
+            this.#uiRoundAfterTimer -= deltaTime;
 
             if (this.#uiRoundAfterTimer <= 0) {
                 this.#uiFightTimer = FighterEngine.defaultUiFightTimer;
@@ -306,7 +306,7 @@ export class FighterEngine {
             }
         }
         if (this.#uiFightTimer > 0) {
-            this.#uiFightTimer -= activeDeltaTime;
+            this.#uiFightTimer -= deltaTime;
 
             if (this.#uiFightTimer <= FighterEngine.defaultUiFightTimer / 3 && !this.#uiFightDone) {
                 this.#uiFightDone = true;
@@ -315,12 +315,12 @@ export class FighterEngine {
         }
 
         if (this.#uiWinnerTimer > 0 && this.#gameState === "POS_ROUND") {
-            this.#uiWinnerTimer -= activeDeltaTime;
+            this.#uiWinnerTimer -= deltaTime;
         }
 
 
         if (this.#shakeTimer > 0) {
-            this.#shakeTimer -= activeDeltaTime;
+            this.#shakeTimer -= deltaTime;
 
             if (this.#shakeTimer <= 0) {
                 this.#shakeTimer = 0;
@@ -336,7 +336,7 @@ export class FighterEngine {
         }
 
         if (this.#fadeDirection !== 0) {
-            this.#fadeTimer += activeDeltaTime;
+            this.#fadeTimer += deltaTime;
 
             const dir = this.#fadeDirection;
 
@@ -672,6 +672,7 @@ export class FighterEngine {
         this.#ctrl0?.ClearAllInputs();
         if (this.#ctrl1 instanceof Controller) this.#ctrl1.ClearAllInputs();
         this.#currentFrame = 0;
+        console.log("Starting round.", Date.now());
 
         if (this.isOnline) {
             for (let i = 0; i < Controller.delayFrames; i++) {
