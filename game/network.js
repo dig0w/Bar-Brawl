@@ -1,4 +1,5 @@
 import { FighterEngine } from "./engine.js";
+import { Controller } from "./controller.js";
 
 export class NetworkManager {
     static signalingURL = "https://cqawfcgolofiaudqacrg.supabase.co";
@@ -10,6 +11,12 @@ export class NetworkManager {
     #signaling;
     #channel;
     #peer;
+    #isHost = false;
+
+    #pingStartTimes = new Map();
+    #pingSamples = [];
+    #pingCount = 0;
+    static MAX_PING_SAMPLES = 5;
 
     constructor(engine) {
         if (!(engine instanceof FighterEngine))
@@ -73,23 +80,61 @@ export class NetworkManager {
             if (this.#channel) {
                 this.#channel.send({ type: "broadcast", event: "signal", payload: { to: targetId, from: this.#myId, signal } });
             }
-            console.log("signal p");
+            console.log("Signalling");
         });
 
         p.on("connect", () => {
-            console.log("connect p");
+            console.log("Connected");
             this.#closeSignaling();
-            this.#engine.mainMenu.StartGame(gameStateMode);
+            this.#startPingTest();
         });
 
         p.on("data", rawData => {
             try {
                 const buffer = rawData.buffer || rawData; 
                 const v = new DataView(buffer);
+
+                // Check if itss a latency sync packet
+                if (v.byteLength === 2 && v.getUint8(0) >= 0xFD) {
+                    const type = v.getUint8(0);
+                    const id = v.getUint8(1);
+
+                    if (type === 0xFF) {
+                        // We received a Ping, reply with a Pong (0xFE)
+                        const reply = new ArrayBuffer(2);
+                        const rv = new DataView(reply);
+                        rv.setUint8(0, 0xFE);
+                        rv.setUint8(1, id);
+                        this.#peer.send(reply);
+                    } else if (type === 0xFE) {
+                        // We received our Pong, calculate RTT
+                        if (this.#pingStartTimes.has(id)) {
+                            const rtt = performance.now() - this.#pingStartTimes.get(id);
+                            this.#pingSamples.push(rtt);
+
+                            if (this.#pingSamples.length < NetworkManager.MAX_PING_SAMPLES) {
+                                // Run the next sample loop
+                                this.#sendPingSample();
+                            } else {
+                                // All samples collected
+                                this.#finalizeDelayFrames(gameStateMode);
+                            }
+                        }
+                    } else if (type === 0xFD) {
+                        // Client receives forced delay frames value from the Host
+                        Controller.delayFrames = id;
+                        console.log(`Client synced dynamic delay from Host: ${Controller.delayFrames}`);
+
+                        console.log("Starting game as Client.", Date.now());
+                        this.#engine.mainMenu.StartGame(gameStateMode);
+                    }
+                    return; // Stop processing this packet
+                }
+
                 const frame = v.getUint32(0);
                 const mask = v.getUint8(4);
 
-                this.#engine.ctrl1.QueueInput(frame, mask);
+                if (this.#engine.ctrl1) this.#engine.ctrl1.QueueInput(frame, mask);
                 console.log("data p", frame, mask)
             } catch (e) {
                 console.error("Failed to parse network packet", e);
@@ -122,6 +167,8 @@ export class NetworkManager {
                 console.log("Challenger checked in:", guestId);
                 this.#initPeer(true, guestId, 2);
             });
+
+            this.#isHost = true;
         });
     }
 
@@ -140,6 +187,8 @@ export class NetworkManager {
             });
 
             this.#channel.send({ type: "broadcast", event: "player-joined", payload: { id: this.#myId } });
+
+            this.#isHost = false;
         });
     }
 
@@ -153,6 +202,58 @@ export class NetworkManager {
         this.#sessionCode = null;
         this.#engine.SetGameState(0, 0);
     }
+
+
+    #startPingTest() {
+        this.#pingSamples = [];
+        this.#pingCount = 0;
+        this.#pingStartTimes.clear();
+        console.log("Starting network latency calibration...");
+        this.#sendPingSample();
+    }
+
+    #sendPingSample() {
+        if (!this.isConnected || this.#pingCount >= NetworkManager.MAX_PING_SAMPLES) return;
+
+        const buffer = new ArrayBuffer(2);
+        const v = new DataView(buffer);
+        v.setUint8(0, 0xFF);
+        v.setUint8(1, this.#pingCount);
+
+        this.#pingStartTimes.set(this.#pingCount, performance.now());
+        this.#peer.send(buffer);
+        this.#pingCount++;
+    }
+
+    #finalizeDelayFrames(gameStateMode) {
+        // Only the Host calculates and dictates the delay frames
+        if (this.#isHost) { 
+            const sum = this.#pingSamples.reduce((a, b) => a + b, 0);
+            const avgRTT = sum / this.#pingSamples.length;
+            const oneWayTrip = avgRTT / 2;
+            const frameTime = 1000 / 60;
+
+            let calculatedDelay = Math.ceil(oneWayTrip / frameTime) + 1;
+            calculatedDelay = Math.max(2, Math.min(8, calculatedDelay));
+
+            Controller.delayFrames = calculatedDelay;
+            console.log(`Host Calibration Complete! Avg Ping: ${avgRTT.toFixed(1)}ms. Delay set to: ${Controller.delayFrames}`);
+
+            // Send sync packet to the Client
+            const syncBuffer = new ArrayBuffer(2);
+            const sv = new DataView(syncBuffer);
+            sv.setUint8(0, 0xFD);
+            sv.setUint8(1, calculatedDelay);
+            this.#peer.send(syncBuffer);
+
+            // Delay host start, to match the clients start
+            setTimeout(() => {
+                console.log("Starting game as Host.", Date.now());
+                this.#engine.mainMenu.StartGame(gameStateMode);
+            }, oneWayTrip);
+        }
+    }
+
 
     loadLibs() {
         return new Promise((resolve, reject) => {
