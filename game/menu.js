@@ -207,8 +207,29 @@ export class Menu {
                 this.ToMenu(3);
                 break;
             case "cCODE":
-                navigator.clipboard.writeText(this.#engine.sessionCode);
-                this.#copyTimer = Menu.defaultCopyTimer;
+                // Classic input selection method
+                const textArea = document.createElement("textarea");
+                textArea.value = this.#engine.sessionCode;
+
+                // Make it completely invisible and out of view
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    const successful = document.execCommand('copy');
+                    if (!successful) {
+                        console.error("Copy failed.");
+                    }
+                } catch (fallbackErr) {
+                    console.error("Copy failed:", fallbackErr);
+                }
+
+                document.body.removeChild(textArea);
                 break;
             case "JOIN":
                 this.ToMenu(4);
