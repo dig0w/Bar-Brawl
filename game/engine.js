@@ -188,7 +188,7 @@ export class FighterEngine {
             // Read inputs & send to the future!
             this.#ctrl0.ReadInputs();
             let localMask = this.#ctrl0.GetInputMask();
-            if (this.#gamePaused) localMask = 0;
+            if (this.#gameState !== "FIGHTING" || this.#gamePaused) localMask = 0;
             const targetFrame = (this.#currentFrame + Controller.delayFrames) >>> 0;
 
             this.#ctrl0.QueueInput(targetFrame, localMask);
