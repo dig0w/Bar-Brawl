@@ -192,39 +192,41 @@ export class FighterEngine {
 
         let isSimulationLocked = false;
 
-        if (this.#gameState === "FIGHTING" && !this.#gamePaused) {
-            if (this.isOnline) {
-                // Read inputs & send to the future!
-                this.#ctrl0.ReadInputs();
-                const localMask = this.#ctrl0.GetInputMask();
-                const targetFrame = (this.#currentFrame + Controller.delayFrames) % 256;
+        if (this.isOnline) {
+            // Read inputs & send to the future!
+            this.#ctrl0.ReadInputs();
+            let localMask = this.#ctrl0.GetInputMask();
+            if (this.#gamePaused) localMask = 0;
+            const targetFrame = (this.#currentFrame + Controller.delayFrames) >>> 0;
 
-                this.#ctrl0.QueueInput(targetFrame, localMask);
-                this.#network.SendInput(targetFrame, localMask);
+            this.#ctrl0.QueueInput(targetFrame, localMask);
+            // also send the a zero out mask to the other client when paused
+            this.#network.SendInput(targetFrame, localMask);
 
-                // Fetch both inputs for the current frame
-                const p1Input = this.#ctrl0.GetInputForFrame(this.#currentFrame);
-                const p2Input = this.#ctrl1.GetInputForFrame(this.#currentFrame);
+            // Fetch both inputs for the current frame
+            const p1Input = this.#ctrl0.GetInputForFrame(this.#currentFrame);
+            const p2Input = this.#ctrl1.GetInputForFrame(this.#currentFrame);
 
-                // If either packet is missing, wait!
-                if (p1Input === undefined || p2Input === undefined) {
-                    isSimulationLocked = true;
-                } else {
-                    this.#ctrl0.ApplyMask(p1Input);
-                    this.#ctrl1.ApplyMask(p2Input);
-
-                    this.#ctrl0.ClearInput(this.#currentFrame);
-                    this.#ctrl1.ClearInput(this.#currentFrame);
-                }
+            // If either packet is missing, wait!
+            if (p1Input === undefined || p2Input === undefined) {
+                isSimulationLocked = true;
             } else {
-                // Offline Mode: Instantly tick controllers
-                this.#ctrl0?.Tick(activeDeltaTime);
-                this.#ctrl1?.Tick(activeDeltaTime);
+                this.#ctrl0.ApplyMask(p1Input);
+                this.#ctrl1.ApplyMask(p2Input);
+
+                this.#ctrl0.ClearInput(this.#currentFrame);
+                this.#ctrl1.ClearInput(this.#currentFrame);
             }
         } else {
-            // Just read inputs so Pause button still works
-            this.#ctrl0?.ReadInputs();
-            if (this.#ctrl1 instanceof Controller) this.#ctrl1.ReadInputs();
+            // Offline Mode: Instantly tick controllers
+            if (this.#gameState === "FIGHTING" && !this.#gamePaused) {
+                this.#ctrl0?.Tick(activeDeltaTime);
+                this.#ctrl1?.Tick(activeDeltaTime);
+            } else {
+                // Just read inputs so Pause button still works
+                this.#ctrl0?.ReadInputs();
+                if (this.#ctrl1 instanceof Controller) this.#ctrl1.ReadInputs();
+            }
         }
 
         if (!isSimulationLocked) {
@@ -237,8 +239,8 @@ export class FighterEngine {
                 }
             }
 
-            if (this.#gameState === "FIGHTING" && !this.#gamePaused) {
-                this.#currentFrame = (this.#currentFrame + 1) % 256;
+            if (this.isOnline || (this.#gameState === "FIGHTING" && !this.#gamePaused)) {
+                this.#currentFrame = (this.#currentFrame + 1) >>> 0;
             }
         }
 

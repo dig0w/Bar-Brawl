@@ -24,10 +24,10 @@ export class NetworkManager {
 
     SendInput(frame, mask) {
         if (this.isConnected) {
-            const buffer = new ArrayBuffer(2);
+            const buffer = new ArrayBuffer(5);
             const v = new DataView(buffer);
-            v.setUint8(0, frame);
-            v.setUint8(1, mask);
+            v.setUint32(0, frame);
+            v.setUint8(4, mask);
             this.#peer.send(buffer);
         }
     }
@@ -86,10 +86,11 @@ export class NetworkManager {
             try {
                 const buffer = rawData.buffer || rawData; 
                 const v = new DataView(buffer);
-                const frame = v.getUint8(0);
-                const mask = v.getUint8(1);
+                const frame = v.getUint32(0);
+                const mask = v.getUint8(4);
 
                 this.#engine.ctrl1.QueueInput(frame, mask);
+                console.log("data p", frame, mask)
             } catch (e) {
                 console.error("Failed to parse network packet", e);
             }

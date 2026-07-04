@@ -34,6 +34,7 @@ export class Controller {
     }
 
     get pawn() { return this.#pawn }
+    get isRemote() { return this.#remote }
 
     Begin() {
         if (this.#remote) return;
