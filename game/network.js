@@ -18,6 +18,10 @@ export class NetworkManager {
     #pingCount = 0;
     static MAX_PING_SAMPLES = 5;
 
+    #status = "NONE";
+    static timeoutDuration = 5;
+    static errorCooldown = 2;
+
     constructor(engine) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
@@ -28,6 +32,8 @@ export class NetworkManager {
     get sessionCode() { return this.#sessionCode; }
     get hasConnection() { return this.#peer || this.#channel; }
     get isConnected() { return this.#peer && this.#peer.connected; }
+
+    get status() { return this.#status; }
 
     SendInput(frame, mask) {
         if (this.isConnected) {
@@ -85,6 +91,7 @@ export class NetworkManager {
 
         p.on("connect", () => {
             console.log("Connected");
+            this.#status = "CONNECTED";
             this.#closeSignaling();
             this.#startPingTest();
         });
@@ -158,6 +165,7 @@ export class NetworkManager {
     async Host() {
         const code = Math.random().toString(36).substring(2, 7).toUpperCase();
         this.#sessionCode = code;
+        this.#status = "HOSTING";
 
         this.#connectSignaling(code, () => {
             console.log("Host room established successfully via channel code:", code);
@@ -174,6 +182,7 @@ export class NetworkManager {
 
     async Join(code) {
         if (!code) return;
+        this.#status = "JOINING";
 
         this.#connectSignaling(code, () => {
             console.log("Successfully connected to room:", code);
@@ -190,9 +199,20 @@ export class NetworkManager {
 
             this.#isHost = false;
         });
+
+        setTimeout(() => {
+            if (!this.isConnected && this.#status === "JOINING") {
+                this.#status = "ERROR";
+                this.#closeSignaling();
+
+                setTimeout(() => { if(this.#status === "ERROR") this.#status = "NONE"; }, NetworkManager.errorCooldown * 1000);
+            }
+        }, NetworkManager.timeoutDuration * 1000);
     }
 
     Disconnect() {
+        this.#status = "NONE";
+
         if (this.#peer) {
             this.#peer.destroy();
             this.#peer = null;

@@ -228,8 +228,9 @@ export class Menu {
                 } catch (fallbackErr) {
                     console.error("Copy failed:", fallbackErr);
                 }
-
                 document.body.removeChild(textArea);
+
+                this.#copyTimer = Menu.defaultCopyTimer;
                 break;
             case "JOIN":
                 this.ToMenu(4);
@@ -239,8 +240,8 @@ export class Menu {
                 this.#isInputActive = true;
 
                 if(this.#inputString.length === 5) {
-                    this.#isInputActive = false;
                     this.#engine.Join(this.#inputString);
+                    this.#inputString = "";
                 }
                 break;
             case "BACK":
@@ -285,8 +286,15 @@ export class Menu {
                 displayText = this.#copyTimer > 0 ? "COPIED!" : (this.#engine.sessionCode || "NO CODE");
             } else if (text.startsWith("i")) {
                 isSpecial = true;
-                displayText = this.#inputString + (this.#isInputActive && Date.now() % 1000 < 500 && this.#inputString.length < 5 ? "_" : "");
-                if (displayText === "" && !this.#isInputActive) displayText = "ENTER CODE";
+                const netStatus = this.#engine.networkStatus;
+
+                if (netStatus === "JOINING") {
+                    displayText = "JOINING";
+                } else if (netStatus === "ERROR" || (this.#copyTimer > 0 && this.#inputString.length < 5)) {
+                    displayText = "ERROR";
+                } else {
+                    displayText = this.#inputString + (this.#isInputActive && Date.now() % 1000 < 500 && this.#inputString.length < 5 ? "_" : "");
+                }
             }
 
             if (isSpecial) {
@@ -305,7 +313,6 @@ export class Menu {
         this.#keys = {};
         this.#lastKeys = {};
 
-        // this.#mouse = { x: 0, y: 0 };
         this.#canSelect = true;
 
         this.ToMenu(0);
@@ -315,6 +322,13 @@ export class Menu {
         this.#menuIndex = i;
         this.#selectedIndex = 0;
         this.#options = Menu.menusOptions[this.#menuIndex];
+
+        if (this.#menuIndex === 4) {
+            this.#isInputActive = true;
+            this.#inputString = "";
+        } else {
+            this.#isInputActive = false;
+        }
     }
 
     Back() {
@@ -350,7 +364,7 @@ export class Menu {
         this.#engine.Fade("#000", 500);
         await FighterEngine.wait(1200);
         if (this.#canSelect) {
-            this.Fade("#000", 0, -1);
+            this.#engine.Fade("#000", 0, -1);
             return;
         }
         this.#engine.SetGameState(state, mode);

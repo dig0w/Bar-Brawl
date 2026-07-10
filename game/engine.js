@@ -115,6 +115,7 @@ export class FighterEngine {
     get isHost() { return this.#gameMode === "VERSUS_HOST"; }
     get isOnline() { return (this.isHost || this.#gameMode === "VERSUS_CLIENT"); }
     isFighterLocal(fighter)  { return this.#ctrl0.pawn === fighter; }
+    get networkStatus() { return this.#network.status; }
 
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
