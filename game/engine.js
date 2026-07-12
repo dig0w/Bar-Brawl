@@ -48,6 +48,7 @@ export class FighterEngine {
 
     #network = new NetworkManager(this);
     #currentFrame = 0;
+    #delayedGameStart = { state: null, frames: -1 };
 
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
@@ -97,6 +98,8 @@ export class FighterEngine {
     #fadeDuration = 0;
     #fadeTimer = 0;
     #fadeDirection = 0; // 1 = fade to, -1 = fade from, 0 = none
+
+    #pendingWaits = [];
 
     constructor() { }
 
@@ -179,8 +182,26 @@ export class FighterEngine {
     }
 
     Tick(deltaTime) {
+        for (let i = this.#pendingWaits.length - 1; i >= 0; i--) {
+            this.#pendingWaits[i].time -= deltaTime;
+            if (this.#pendingWaits[i].time <= 0) {
+                this.#pendingWaits[i].resolve();
+                this.#pendingWaits.splice(i, 1);
+            }
+        }
+
         if (this.#gameState === "MENU" || this.#gamePaused) {
             this.#mainMenu.Tick(deltaTime);
+        }
+
+        if (this.#delayedGameStart.frames >= 0 && this.#delayedGameStart.state != null) {
+            this.#delayedGameStart.frames--;
+            if (this.#delayedGameStart.frames <= 0) {
+                console.log("Starting game as Host.", Date.now());
+                this.#mainMenu.StartGame(this.#delayedGameStart.state);
+                this.#delayedGameStart.state = null;
+                this.#delayedGameStart.frames = -1
+            }
         }
 
         let isSimulationLocked = false;
@@ -696,7 +717,7 @@ export class FighterEngine {
         this.SetGameState(4);
         this.#uiRoundText = ``;
 
-        await FighterEngine.wait(50);
+        await this.Wait(50);
         if (this.#gameState !== "POS_ROUND") return;
 
         this.#uiWinnerTimer = FighterEngine.defaultUiWinnerTimer;
@@ -707,17 +728,17 @@ export class FighterEngine {
         if (loser == this.fighter0) this.#scoreF1++;
         else if (loser == this.fighter1) this.#scoreF0++;
 
-        await FighterEngine.wait(400);
+        await this.Wait(400);
         if (this.#gameState !== "POS_ROUND") return;
         this.#timeScale = 0.1;
 
-        await FighterEngine.wait(400);
+        await this.Wait(400);
         if (this.#gameState !== "POS_ROUND") {
             this.#timeScale = 1;
             return;
         }
         this.Fade("#000", 500);
-        await FighterEngine.wait(1200);
+        await this.Wait(1200);
         if (this.#gameState !== "POS_ROUND") {
             this.Fade("#000", 0, -1);
             return;
@@ -732,10 +753,10 @@ export class FighterEngine {
         this.SetGameState(5);
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
 
-        await FighterEngine.wait(4000);
+        await this.Wait(4000);
         if (this.#gameState !== "GAME_OVER") return;
         this.Fade("#000", 500);
-        await FighterEngine.wait(1200);
+        await this.Wait(1200);
         if (this.#gameState !== "GAME_OVER") {
             this.Fade("#000", 0, -1);
             return;
@@ -759,7 +780,7 @@ export class FighterEngine {
     async Resume() {
         this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
         this.#mainMenu.fadeDirection = 1;
-        await FighterEngine.wait(Menu.defaultFadeTimer * 1000);
+        await this.Wait(Menu.defaultFadeTimer * 1000);
 
         this.#gamePaused = false;
     }
@@ -769,6 +790,7 @@ export class FighterEngine {
     Host() { this.#network.Host(); }
     Join(code) { this.#network.Join(code); }
     Disconnect() { this.#network.Disconnect(); }
+    SetDelayedGameStart(gameStateMode, delayFrames) { this.#delayedGameStart.state = gameStateMode; this.#delayedGameStart.frames = delayFrames; }
     loadLibs() { return this.#network.loadLibs(); }
 
 
@@ -892,5 +914,5 @@ export class FighterEngine {
         return canvas;
     }
 
-    static wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    Wait(ms) { return new Promise(resolve => { this.#pendingWaits.push({ time: ms / 1000, resolve }); }); }
 }

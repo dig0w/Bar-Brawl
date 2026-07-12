@@ -359,10 +359,10 @@ export class Menu {
     async StartGame(mode, state = 2) {
         this.#canSelect = false;
 
-        await FighterEngine.wait(400);
+        await this.#engine.Wait(400);
         if (this.#canSelect) return;
         this.#engine.Fade("#000", 500);
-        await FighterEngine.wait(1200);
+        await this.#engine.Wait(1200);
         if (this.#canSelect) {
             this.#engine.Fade("#000", 0, -1);
             return;

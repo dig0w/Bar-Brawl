@@ -132,7 +132,7 @@ export class NetworkManager {
                         Controller.delayFrames = id;
                         console.log(`Client synced dynamic delay from Host: ${Controller.delayFrames}`);
 
-                        console.log("Starting game as Client.");
+                        console.log("Starting game as Client.", Date.now());
                         this.#engine.mainMenu.StartGame(gameStateMode);
                     }
                     return; // Stop processing this packet
@@ -266,11 +266,10 @@ export class NetworkManager {
             sv.setUint8(1, calculatedDelay);
             this.#peer.send(syncBuffer);
 
+            console.log("Ready to start.", Date.now(), " frames:", calculatedDelay, " time:", calculatedDelay * frameTime, "ms", " prev delay:", oneWayTrip * 1000, "ms");
+
             // Delay host start, to match the clients start
-            setTimeout(() => {
-                console.log("Starting game as Host.");
-                this.#engine.mainMenu.StartGame(gameStateMode);
-            }, oneWayTrip);
+            this.#engine.SetDelayedGameStart(gameStateMode, calculatedDelay - 2);
         }
     }
 

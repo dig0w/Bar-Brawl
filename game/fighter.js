@@ -610,11 +610,11 @@ export class Fighter {
         this.#vel.x = 0;
         this.#vel.y = 0;
 
-        await FighterEngine.wait(150);
+        await this.#engine.Wait(150);
 
         this.#vel.y -= this.#jumpForce;
 
-        await FighterEngine.wait(50);
+        await this.#engine.Wait(50);
         this.#celebrating = true;
     }
 
