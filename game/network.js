@@ -45,6 +45,42 @@ export class NetworkManager {
         }
     }
 
+    // When lockstep simulation has stalled, Client asks the Host for a fresh snapshot
+    RequestFullStateRecovery() {
+        if (!this.isConnected) return;
+
+        if (this.#isHost) {
+            this.#sendFullStateRecovery();
+            return;
+        }
+
+        const buffer = new ArrayBuffer(2);
+        const v = new DataView(buffer);
+        v.setUint8(0, 0xFC);
+        v.setUint8(1, 0);
+        this.#peer.send(buffer);
+        console.log("Requested Full State Recovery from Host.");
+    }
+
+    // Serializes the game state, ships it to the Client, and applies it locally too so both sides reset their states
+    #sendFullStateRecovery() {
+        if (!this.isConnected) return;
+
+        const state = this.#engine.SerializeState();
+
+        if (this.#peer) {
+            const json = new TextEncoder().encode(JSON.stringify(state));
+            const buffer = new ArrayBuffer(1 + json.byteLength);
+            const bytes = new Uint8Array(buffer);
+            bytes[0] = 0xFB;
+            bytes.set(json, 1);
+            this.#peer.send(buffer);
+        }
+
+        this.#engine.ApplyFullStateRecovery(state);
+        console.log("Sent Full State Recovery snapshot to Client. Frame:", state.frame);
+    }
+
     #connectSignaling(roomCode, callback) {
         if (this.#channel) return;
 
@@ -98,23 +134,34 @@ export class NetworkManager {
 
         p.on("data", rawData => {
             try {
-                const buffer = rawData.buffer || rawData; 
-                const v = new DataView(buffer);
+                const bytes = ArrayBuffer.isView(rawData)
+                    ? new Uint8Array(rawData.buffer, rawData.byteOffset, rawData.byteLength)
+                    : new Uint8Array(rawData);
+                const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
-                // Check if itss a latency sync packet
-                if (v.byteLength === 2 && v.getUint8(0) >= 0xFD) {
-                    const type = v.getUint8(0);
+                const type = bytes.byteLength > 0 ? bytes[0] : 0;
+
+                if (type === 0xFB) {
+                    // Received a snapshot of the game state
+                    const json = new TextDecoder().decode(bytes.subarray(1));
+                    const state = JSON.parse(json);
+                    this.#engine.ApplyFullStateRecovery(state);
+                    return; // Stop processing this packet
+                }
+
+                // Check if its a latency sync packet
+                if (v.byteLength === 2 && type >= 0xFC) {
                     const id = v.getUint8(1);
 
                     if (type === 0xFF) {
-                        // We received a Ping, reply with a Pong (0xFE)
+                        // Received a Ping, reply with a Pong (0xFE)
                         const reply = new ArrayBuffer(2);
                         const rv = new DataView(reply);
                         rv.setUint8(0, 0xFE);
                         rv.setUint8(1, id);
                         this.#peer.send(reply);
                     } else if (type === 0xFE) {
-                        // We received our Pong, calculate RTT
+                        // Received our Pong, calculate RTT
                         if (this.#pingStartTimes.has(id)) {
                             const rtt = performance.now() - this.#pingStartTimes.get(id);
                             this.#pingSamples.push(rtt);
@@ -134,6 +181,9 @@ export class NetworkManager {
 
                         console.log("Starting game as Client.", Date.now());
                         this.#engine.mainMenu.StartGame(gameStateMode);
+                    } else if (type === 0xFC) {
+                        // Requesting a fresh authoritative snapshot
+                        if (this.#isHost) this.#sendFullStateRecovery();
                     }
                     return; // Stop processing this packet
                 }

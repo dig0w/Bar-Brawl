@@ -643,6 +643,90 @@ export class Fighter {
         this.#bloodAnimState = -1;
     }
 
+    // Captures every field that affects simulation or visible presentation
+    SerializeState() {
+        return {
+            loc: { x: this.#loc.x, y: this.#loc.y },
+            vel: { x: this.#vel.x, y: this.#vel.y },
+            facingRight: this.#facingRight,
+
+            moveInput: this.moveInput,
+
+            bodyAnimState: this.#bodyAnimState,
+            bodyAnimTimer: this.#bodyAnimTimer,
+            walkingAnimState: this.#walkingAnimState,
+            walkingAnimTimer: this.#walkingAnimTimer,
+
+            punchAnimState: this.#punchAnimState,
+            punchAnimTimer: this.#punchAnimTimer,
+            punchHasHit: this.#punchHasHit,
+            punchTimer: this.#punchTimer,
+            punchCooldown: this.#punchCooldown,
+
+            isBlocking: this.#isBlocking,
+            celebrating: this.#celebrating,
+
+            punchedAnimTimer: this.#punchedAnimTimer,
+            punchedCooldown: this.#punchedCooldown,
+
+            dieAnimState: this.#dieAnimState,
+            dieAnimTimer: this.#dieAnimTimer,
+
+            bloodAnimTimer: this.#bloodAnimTimer,
+            bloodAnimState: this.#bloodAnimState,
+            bloodLoc: { x: this.#bloodLoc.x, y: this.#bloodLoc.y },
+
+            health: this.#health,
+            isDead: this.#isDead,
+            ghostHealth: this.#ghostHealth
+        };
+    }
+
+    // Restores a state produced by SerializeState()
+    ApplyState(state) {
+        if (!state) return;
+
+        this.#loc.x = state.loc.x;
+        this.#loc.y = state.loc.y;
+        this.#vel.x = state.vel.x;
+        this.#vel.y = state.vel.y;
+        this.#facingRight = state.facingRight;
+
+        this.moveInput = state.moveInput;
+
+        this.#bodyAnimState = state.bodyAnimState;
+        this.#bodyAnimTimer = state.bodyAnimTimer;
+        this.#walkingAnimState = state.walkingAnimState;
+        this.#walkingAnimTimer = state.walkingAnimTimer;
+
+        this.#punchAnimState = state.punchAnimState;
+        this.#punchAnimTimer = state.punchAnimTimer;
+        this.#punchHasHit = state.punchHasHit;
+        this.#punchTimer = state.punchTimer;
+        this.#punchCooldown = state.punchCooldown;
+
+        this.#isBlocking = state.isBlocking;
+        this.#celebrating = state.celebrating;
+
+        this.#punchedAnimTimer = state.punchedAnimTimer;
+        this.#punchedCooldown = state.punchedCooldown;
+
+        this.#dieAnimState = state.dieAnimState;
+        this.#dieAnimTimer = state.dieAnimTimer;
+
+        this.#bloodAnimTimer = state.bloodAnimTimer;
+        this.#bloodAnimState = state.bloodAnimState;
+        this.#bloodLoc.x = state.bloodLoc.x;
+        this.#bloodLoc.y = state.bloodLoc.y;
+
+        this.#health = state.health;
+        this.#isDead = state.isDead;
+        this.#ghostHealth = state.ghostHealth;
+
+        // Hitboxes are derived from loc/facing, so just rebuild them
+        this.#UpdateHitboxes();
+    }
+
 
     #drawDebugHitboxes(ctx) {
         ctx.save();

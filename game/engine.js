@@ -50,6 +50,14 @@ export class FighterEngine {
     #currentFrame = 0;
     #delayedGameStart = { state: null, frames: -1 };
 
+    #isSimulationLocked = false;
+    #lockTimer = 0;
+    #lockRecoveryCooldownTimer = 0;
+    #lockRecoveryAttempts = 0;
+    static lockRecoveryTimeout = 1.5;
+    static lockRecoveryCooldown = 1.5;
+    static maxLockRecoveryAttempts = 4;
+
     static uiSheet = Object.assign(new Image(), { src: "assets/ui_sheet.png" });
     #redFontSheet = null;
     #greenFontSheet = null;
@@ -119,6 +127,7 @@ export class FighterEngine {
     get isOnline() { return (this.isHost || this.#gameMode === "VERSUS_CLIENT"); }
     isFighterLocal(fighter)  { return this.#ctrl0.pawn === fighter; }
     get networkStatus() { return this.#network.status; }
+    get isGameLocked() { return this.#isSimulationLocked; }
 
     get fighter0() { return this.#fighter0; }
     get fighter1() { return this.#fighter1; }
@@ -221,7 +230,7 @@ export class FighterEngine {
             const p1Input = this.#ctrl0.GetInputForFrame(this.#currentFrame);
             const p2Input = this.#ctrl1.GetInputForFrame(this.#currentFrame);
 
-            // If either packet is missing, wait!
+            // If either packet is missing, wait
             if (p1Input === undefined || p2Input === undefined) {
                 isSimulationLocked = true;
             } else {
@@ -230,6 +239,30 @@ export class FighterEngine {
 
                 this.#ctrl0.ClearInput(this.#currentFrame);
                 this.#ctrl1.ClearInput(this.#currentFrame);
+            }
+
+            this.#isSimulationLocked = isSimulationLocked;
+
+            if (isSimulationLocked) {
+                this.#lockTimer += deltaTime;
+                if (this.#lockRecoveryCooldownTimer > 0) this.#lockRecoveryCooldownTimer -= deltaTime;
+
+                if (this.#lockTimer >= FighterEngine.lockRecoveryTimeout && this.#lockRecoveryCooldownTimer <= 0) {
+                    this.#lockTimer = 0;
+                    this.#lockRecoveryCooldownTimer = FighterEngine.lockRecoveryCooldown;
+                    this.#lockRecoveryAttempts++;
+
+                    if (this.#lockRecoveryAttempts > FighterEngine.maxLockRecoveryAttempts) {
+                        console.warn("Full State Recovery failed repeatedly, the connection appears dead. Disconnecting.");
+                        this.Disconnect();
+                    } else {
+                        console.log(`Game lock detected at frame ${this.#currentFrame}, requesting Full State Recovery (attempt ${this.#lockRecoveryAttempts}).`);
+                        this.#network.RequestFullStateRecovery();
+                    }
+                }
+            } else {
+                this.#lockTimer = 0;
+                this.#lockRecoveryAttempts = 0;
             }
         } else {
             // Offline Mode: Instantly tick controllers
@@ -540,6 +573,10 @@ export class FighterEngine {
             this.DrawPixelText(this.#ctx, this.#uiWinnerText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiWinnerFillColor, FighterEngine.uiWinnerOutlineColor);
         }
 
+        if (this.isOnline && this.#isSimulationLocked) {
+            this.DrawPixelText(this.#ctx, "Syncing...", (this.#uiRoundLoc.x | 0), (this.#canvas.height - 16 | 0), FighterEngine.uiRoundAfterSize, FighterEngine.uiRoundFillColor, "#00000000");
+        }
+
         if (this.#gameState === "MENU" || this.#gamePaused) {
             this.#mainMenu.Draw(this.#ctx);
         }
@@ -792,6 +829,51 @@ export class FighterEngine {
     Disconnect() { this.#network.Disconnect(); }
     SetDelayedGameStart(gameStateMode, delayFrames) { this.#delayedGameStart.state = gameStateMode; this.#delayedGameStart.frames = delayFrames; }
     loadLibs() { return this.#network.loadLibs(); }
+
+    // Captures everything needed to reconstruct the match
+    SerializeState() {
+        return {
+            frame: this.#currentFrame,
+            gameState: this.#gameState,
+            rounds: this.#rounds,
+            scoreF0: this.#scoreF0,
+            scoreF1: this.#scoreF1,
+            delayFrames: Controller.delayFrames,
+            fighter0: this.#fighter0.SerializeState(),
+            fighter1: this.#fighter1.SerializeState()
+        };
+    }
+
+    // Applies a state
+    ApplyFullStateRecovery(state) {
+        if (!state || !this.isOnline || !this.#ctrl0 || !this.#ctrl1) return;
+
+        this.#fighter0.ApplyState(state.fighter0);
+        this.#fighter1.ApplyState(state.fighter1);
+
+        this.#currentFrame = state.frame >>> 0;
+        this.#rounds = state.rounds;
+        this.#scoreF0 = state.scoreF0;
+        this.#scoreF1 = state.scoreF1;
+        Controller.delayFrames = state.delayFrames;
+
+        if (state.gameState) this.#gameState = state.gameState;
+
+        this.#ctrl0.ClearAllInputs();
+        this.#ctrl1.ClearAllInputs();
+        for (let i = 0; i < Controller.delayFrames; i++) {
+            const f = (this.#currentFrame + i) >>> 0;
+            this.#ctrl0.QueueInput(f, 0);
+            this.#ctrl1.QueueInput(f, 0);
+        }
+
+        this.#isSimulationLocked = false;
+        this.#lockTimer = 0;
+        this.#lockRecoveryCooldownTimer = 0;
+        this.#lockRecoveryAttempts = 0;
+
+        console.log("Full State Recovery applied. Resuming from frame", this.#currentFrame);
+    }
 
 
     DrawPixelText(ctx, text, x, y, size = 5, fillColor = "#fff", outlineColor = "#000") {
