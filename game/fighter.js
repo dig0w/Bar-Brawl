@@ -437,8 +437,6 @@ export class Fighter {
 
             ctx.drawImage(Fighter.bloodImg, (frameCoords.x | 0), (frameCoords.y | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0), (this.#bloodLoc.x - Fighter.bloodSize.w / 2 | 0), (this.#bloodLoc.y - Fighter.bloodSize.h / 2 | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0));
         }
-
-        if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
     }
 
     DrawUI(ctx) {
@@ -568,7 +566,6 @@ export class Fighter {
         }
 
         this.#health -= damage;
-        console.log(this.#health);
 
         this.#punchAnimState = -1;
 
@@ -725,33 +722,5 @@ export class Fighter {
 
         // Hitboxes are derived from loc/facing, so just rebuild them
         this.#UpdateHitboxes();
-    }
-
-
-    #drawDebugHitboxes(ctx) {
-        ctx.save();
-        ctx.lineWidth = .5;
-
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.7)";
-
-        const rectLimbs = [this.#hitboxes[1], this.#hitboxes[2], this.#hitboxes[3], this.#hitboxes[4], this.#hitboxes[5]];
-        for (let rect of rectLimbs) {
-            ctx.beginPath();
-            ctx.rect(rect.loc.x, rect.loc.y, rect.size.w, rect.size.h);
-            ctx.stroke();
-        }
-
-        ctx.beginPath();
-        ctx.arc(this.#hitboxes[0].loc.x, this.#hitboxes[0].loc.y, this.#hitboxes[0].radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
-            ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
-            ctx.beginPath();
-            ctx.arc(this.#fistHitBox.loc.x, this.#fistHitBox.loc.y, this.#fistHitBox.radius, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        ctx.restore();
     }
 }

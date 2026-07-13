@@ -206,7 +206,6 @@ export class FighterEngine {
         if (this.#delayedGameStart.frames >= 0 && this.#delayedGameStart.state != null) {
             this.#delayedGameStart.frames--;
             if (this.#delayedGameStart.frames <= 0) {
-                console.log("Starting game as Host.", Date.now());
                 this.#mainMenu.StartGame(this.#delayedGameStart.state);
                 this.#delayedGameStart.state = null;
                 this.#delayedGameStart.frames = -1
@@ -253,10 +252,8 @@ export class FighterEngine {
                     this.#lockRecoveryAttempts++;
 
                     if (this.#lockRecoveryAttempts > FighterEngine.maxLockRecoveryAttempts) {
-                        console.warn("Full State Recovery failed repeatedly, the connection appears dead. Disconnecting.");
                         this.Disconnect();
                     } else {
-                        console.log(`Game lock detected at frame ${this.#currentFrame}, requesting Full State Recovery (attempt ${this.#lockRecoveryAttempts}).`);
                         this.#network.RequestFullStateRecovery();
                     }
                 }
@@ -573,7 +570,7 @@ export class FighterEngine {
             this.DrawPixelText(this.#ctx, this.#uiWinnerText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiWinnerFillColor, FighterEngine.uiWinnerOutlineColor);
         }
 
-        if (this.isOnline && this.#isSimulationLocked) {
+        if (this.isOnline && this.#isSimulationLocked && this.#gameState === "FIGHTING") {
             this.DrawPixelText(this.#ctx, "Syncing...", (this.#uiRoundLoc.x | 0), (this.#canvas.height - 16 | 0), FighterEngine.uiRoundAfterSize, FighterEngine.uiRoundFillColor, "#00000000");
         }
 
@@ -731,7 +728,6 @@ export class FighterEngine {
         this.#ctrl0?.ClearAllInputs();
         if (this.#ctrl1 instanceof Controller) this.#ctrl1.ClearAllInputs();
         this.#currentFrame = 0;
-        console.log("Starting round.", Date.now());
 
         if (this.isOnline) {
             for (let i = 0; i < Controller.delayFrames; i++) {
@@ -871,8 +867,6 @@ export class FighterEngine {
         this.#lockTimer = 0;
         this.#lockRecoveryCooldownTimer = 0;
         this.#lockRecoveryAttempts = 0;
-
-        console.log("Full State Recovery applied. Resuming from frame", this.#currentFrame);
     }
 
 

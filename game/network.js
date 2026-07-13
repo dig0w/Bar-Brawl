@@ -59,7 +59,6 @@ export class NetworkManager {
         v.setUint8(0, 0xFC);
         v.setUint8(1, 0);
         this.#peer.send(buffer);
-        console.log("Requested Full State Recovery from Host.");
     }
 
     // Serializes the game state, ships it to the Client, and applies it locally too so both sides reset their states
@@ -78,7 +77,6 @@ export class NetworkManager {
         }
 
         this.#engine.ApplyFullStateRecovery(state);
-        console.log("Sent Full State Recovery snapshot to Client. Frame:", state.frame);
     }
 
     #connectSignaling(roomCode, callback) {
@@ -111,7 +109,6 @@ export class NetworkManager {
         if (this.#channel) {
             this.#signaling.removeChannel(this.#channel);
             this.#channel = null;
-            console.log("Signaling web sockets cleanly closed.");
         }
     }
 
@@ -122,11 +119,9 @@ export class NetworkManager {
             if (this.#channel) {
                 this.#channel.send({ type: "broadcast", event: "signal", payload: { to: targetId, from: this.#myId, signal } });
             }
-            console.log("Signalling");
         });
 
         p.on("connect", () => {
-            console.log("Connected");
             this.#status = "CONNECTED";
             this.#closeSignaling();
             this.#startPingTest();
@@ -177,9 +172,6 @@ export class NetworkManager {
                     } else if (type === 0xFD) {
                         // Client receives forced delay frames value from the Host
                         Controller.delayFrames = id;
-                        console.log(`Client synced dynamic delay from Host: ${Controller.delayFrames}`);
-
-                        console.log("Starting game as Client.", Date.now());
                         this.#engine.mainMenu.StartGame(gameStateMode);
                     } else if (type === 0xFC) {
                         // Requesting a fresh authoritative snapshot
@@ -192,19 +184,16 @@ export class NetworkManager {
                 const mask = v.getUint8(4);
 
                 if (this.#engine.ctrl1) this.#engine.ctrl1.QueueInput(frame, mask);
-                console.log("data p", frame, mask)
             } catch (e) {
                 console.error("Failed to parse network packet", e);
             }
         });
 
         p.on("close", () => {
-            console.log("close p");
             this.Disconnect();
         });
 
         p.on("error", (a) => {
-            console.log("error p", a);
             this.Disconnect();
         });
 
@@ -218,11 +207,8 @@ export class NetworkManager {
         this.#status = "HOSTING";
 
         this.#connectSignaling(code, () => {
-            console.log("Host room established successfully via channel code:", code);
-
             this.#channel.on("broadcast", { event: "player-joined" }, payload => {
                 const guestId = payload.payload.id;
-                console.log("Challenger checked in:", guestId);
                 this.#initPeer(true, guestId, 2);
             });
 
@@ -235,8 +221,6 @@ export class NetworkManager {
         this.#status = "JOINING";
 
         this.#connectSignaling(code, () => {
-            console.log("Successfully connected to room:", code);
-
             this.#channel.on("broadcast", { event: "signal" }, payload => {
                 const data = payload.payload;
                 if (data.to === this.#myId && !this.#peer) {
@@ -246,7 +230,6 @@ export class NetworkManager {
             });
 
             this.#channel.send({ type: "broadcast", event: "player-joined", payload: { id: this.#myId } });
-
             this.#isHost = false;
         });
 
@@ -278,7 +261,6 @@ export class NetworkManager {
         this.#pingSamples = [];
         this.#pingCount = 0;
         this.#pingStartTimes.clear();
-        console.log("Starting network latency calibration...");
         this.#sendPingSample();
     }
 
@@ -307,7 +289,6 @@ export class NetworkManager {
             calculatedDelay = Math.max(2, Math.min(8, calculatedDelay));
 
             Controller.delayFrames = calculatedDelay;
-            console.log(`Host Calibration Complete! Avg Ping: ${avgRTT.toFixed(1)}ms. Delay set to: ${Controller.delayFrames}`);
 
             // Send sync packet to the Client
             const syncBuffer = new ArrayBuffer(2);
@@ -315,8 +296,6 @@ export class NetworkManager {
             sv.setUint8(0, 0xFD);
             sv.setUint8(1, calculatedDelay);
             this.#peer.send(syncBuffer);
-
-            console.log("Ready to start.", Date.now(), " frames:", calculatedDelay, " time:", calculatedDelay * frameTime, "ms", " prev delay:", oneWayTrip * 1000, "ms");
 
             // Delay host start, to match the clients start
             this.#engine.SetDelayedGameStart(gameStateMode, calculatedDelay - 2);
@@ -328,8 +307,6 @@ export class NetworkManager {
         return new Promise((resolve, reject) => {
             if (window.SimplePeer && window.supabase) return resolve();
 
-            console.log("Loading multiplayer network libraries...");
-
             const signalingScript = document.createElement("script");
             signalingScript.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
@@ -340,7 +317,6 @@ export class NetworkManager {
             const onScriptLoad = () => {
                 loadedCount++;
                 if (loadedCount === 2) {
-                    console.log("Multiplayer libraries successfully compiled.");
                     resolve();
                 }
             };
