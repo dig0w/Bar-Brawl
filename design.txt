@@ -69,20 +69,23 @@ To do:
         [x] Animate
     [x] Credits
     [ ] Sound Effects (Chiptone (by sfbgames), jsfxr / bfxr, OpenGameArt.org, Sonniss (The Archive), Freesound.org)
-        [ ] Punch 1
-        [ ] Punch 2
-        [ ] Groan 1
-        [ ] Groan 2
+        [x] Punch 1
+        [x] Punch 2
+        [x] Groan 1
+        [x] Groan 2
+        [x] Hit 1
+        [x] Hit 2
         [ ] Block 1
         [ ] Block 2
-        [ ] Fight!
-        [ ] Round (number)
-        [ ] UI
-        [ ] Player (number) wins!
+        [x] Jump 1
+        [x] Jump 2
+        [ ] Idle
+        [ ] Round Start
+        [ ] Round End
+        [x] UI
         [ ] Bottle smash
-        [ ] Background noise at round 1
-        [ ] Background noise at round 2
-        [ ] Background noise at round 3
+        [ ] Background noise
+        [ ] Music
     [x] Bald Character
         [x] Idling
         [x] Walking

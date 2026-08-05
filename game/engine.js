@@ -109,6 +109,21 @@ export class FighterEngine {
 
     #pendingWaits = [];
 
+    #audioCtx = null;
+    static soundUrls = [
+        "assets/ui.wav",
+        "assets/punch_1.wav",
+        "assets/punch_2.wav",
+        "assets/hit_1.wav",
+        "assets/hit_2.wav",
+        "assets/groan_1.wav",
+        "assets/groan_2.wav",
+        "assets/jump_1.wav",
+        "assets/jump_2.wav",
+    ]
+    #soundBuffers = [];
+    #volume = .5;
+
     constructor() { }
 
     get gameState() { return this.#gameState; }
@@ -173,6 +188,9 @@ export class FighterEngine {
         }
 
         this.SetGameState(0);
+
+        this.#audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.#preloadSounds();
 
         window.onbeforeunload = () => {
             this.Disconnect();
@@ -754,7 +772,7 @@ export class FighterEngine {
         if (this.#gameState !== "POS_ROUND") return;
 
         this.#uiWinnerTimer = FighterEngine.defaultUiWinnerTimer;
-        this.#uiWinnerText = `${loser == this.#fighter0 ? "P2" : "P1"} Wins!`;
+        this.#uiWinnerText = this.#gameMode === "MAIN" ? (loser == this.#fighter0 ? "You Lost!" : "You Won!") : `${loser == this.#fighter0 ? "P2" : "P1"} Wins!`;
 
         winner.Celebrate();
 
@@ -816,6 +834,42 @@ export class FighterEngine {
         await this.Wait(Menu.defaultFadeTimer * 1000);
 
         this.#gamePaused = false;
+    }
+
+
+    async #preloadSounds() {
+        for (let i = 0; i < FighterEngine.soundUrls.length; i++) {
+            try {
+                const response = await fetch(FighterEngine.soundUrls[i]);
+                const arrayBuffer = await response.arrayBuffer();
+
+                this.#soundBuffers[i] = await this.#audioCtx.decodeAudioData(arrayBuffer);
+            } catch (err) {
+                console.error(`Failed to load sound: ${FighterEngine.soundUrls[i]}`, err);
+            }
+        }
+    }
+
+    PlaySound(index, pitch = 1.0, volume = 1) {
+        const buffer = this.#soundBuffers[index];
+        if (!buffer) return;
+
+        if (this.#audioCtx.state === "suspended") {
+            this.#audioCtx.resume();
+        }
+
+        const source = this.#audioCtx.createBufferSource();
+        source.buffer = buffer;
+
+        const gainNode = this.#audioCtx.createGain();
+        gainNode.gain.value = this.#volume * volume;
+
+        source.playbackRate.value = pitch;
+
+        source.connect(gainNode);
+        gainNode.connect(this.#audioCtx.destination);
+
+        source.start(0);
     }
 
 

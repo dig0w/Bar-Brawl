@@ -269,6 +269,8 @@ export class Fighter {
                         if (intersected) {
                             this.#punchHasHit = true;
 
+                            this.#engine.PlaySound(3 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
+
                             opponent.TakeDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0)}, Number(this.#vel.x.toFixed(2)));
                             break;
                         }
@@ -512,8 +514,11 @@ export class Fighter {
     }
 
     Jump() {
-        if (!this.isPunching && !this.isBlocking && this.isGrounded && !this.isStunned)
+        if (!this.isPunching && !this.isBlocking && this.isGrounded && !this.isStunned) {
             this.#vel.y -= this.#jumpForce;
+
+            this.#engine.PlaySound(7 + (Math.random() >= 0.95 ? 1 : 0), 0.9 + Math.random() * 0.2);
+        }
     }
 
     Punch() {
@@ -524,6 +529,8 @@ export class Fighter {
             this.#punchTimer = 0;
             this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
+
+            this.#engine.PlaySound(1 + (Math.random() >= 0.55 ? 1 : 0), 0.9 + Math.random() * 0.2);
         }
     }
 
@@ -563,6 +570,10 @@ export class Fighter {
         if (this.isBlocking == 1) {
             damage *= 0.2;
             knockback = knockback * 0.4;
+
+            this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 0.9 + Math.random() * 0.2, .5);
+        } else {
+            this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 0.9 + Math.random() * 0.2);
         }
 
         this.#health -= damage;
