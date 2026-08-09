@@ -110,16 +110,19 @@ export class FighterEngine {
     #pendingWaits = [];
 
     #audioCtx = null;
+    #audioBuses = [];
     static soundUrls = [
-        "assets/ui.wav",
-        "assets/punch_1.wav",
-        "assets/punch_2.wav",
-        "assets/hit_1.wav",
-        "assets/hit_2.wav",
-        "assets/groan_1.wav",
-        "assets/groan_2.wav",
-        "assets/jump_1.wav",
-        "assets/jump_2.wav",
+        { url: "assets/ui1.wav", bus: 1 },
+        { url: "assets/punch_11.wav", bus: 0 },
+        { url: "assets/punch_21.wav", bus: 0 },
+        { url: "assets/hit_11.wav", bus: 0 },
+        { url: "assets/hit_21.wav", bus: 0 },
+        { url: "assets/groan_11.wav", bus: 0 },
+        { url: "assets/groan_21.wav", bus: 0 },
+        { url: "assets/jump_12.wav", bus: 0 },
+        { url: "assets/jump_22.wav", bus: 0 },
+        { url: "assets/idle1.wav", bus: 0 },
+        { url: "assets/cheer1.wav", bus: 0 },
     ]
     #soundBuffers = [];
     #volume = .5;
@@ -189,7 +192,6 @@ export class FighterEngine {
 
         this.SetGameState(0);
 
-        this.#audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         this.#preloadSounds();
 
         window.onbeforeunload = () => {
@@ -313,6 +315,8 @@ export class FighterEngine {
                 this.#currentFrame = (this.#currentFrame + 1) >>> 0;
             }
         }
+
+        if (this.#gamePaused && !this.isOnline) return;
 
         // Bar Animation
         this.#barAnimTimer -= deltaTime;
@@ -677,6 +681,16 @@ export class FighterEngine {
                 this.#scoreF0 = 0;
                 this.#scoreF1 = 0;
 
+                this.#barAnimTimer = FighterEngine.defaultBarAnimTimer;
+                this.#introTimer = 0;
+                this.#introState = 0;
+                this.#uiGameOverTimer = 0;
+                this.#uiCreditsTimer = 0;
+                this.#uiRoundTimer = 0;
+                this.#uiRoundAfterTimer = 0;
+                this.#uiFightTimer = 0;
+                this.#uiWinnerTimer = 0;
+
                 this.#uiRoundText = "";
                 break;
             case 1:
@@ -766,6 +780,7 @@ export class FighterEngine {
         this.#ctrl1?.Reset();
 
         this.SetGameState(4);
+        const cheerSfx = this.PlaySound(10, 1.2, 0.2, true, 100);
         this.#uiRoundText = ``;
 
         await this.Wait(50);
@@ -789,6 +804,7 @@ export class FighterEngine {
             return;
         }
         this.Fade("#000", 500);
+        cheerSfx.StopSound(750);
         await this.Wait(1200);
         if (this.#gameState !== "POS_ROUND") {
             this.Fade("#000", 0, -1);
@@ -826,6 +842,8 @@ export class FighterEngine {
         this.#gamePaused = true;
         this.#mainMenu.Reset();
         this.#mainMenu.ToMenu(6);
+
+        if (!this.isOnline) this.#audioBuses[0].gain.setValueAtTime(0, this.#audioCtx.currentTime);
     }
 
     async Resume() {
@@ -834,23 +852,41 @@ export class FighterEngine {
         await this.Wait(Menu.defaultFadeTimer * 1000);
 
         this.#gamePaused = false;
+
+        if (!this.isOnline) this.#audioBuses[0].gain.setValueAtTime(1, this.#audioCtx.currentTime);
     }
 
 
     async #preloadSounds() {
+        this.#audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        let biggestBus = 0;
+
         for (let i = 0; i < FighterEngine.soundUrls.length; i++) {
+            const sound = FighterEngine.soundUrls[i];
+
+            if (sound.bus > biggestBus) biggestBus = sound.bus;
+
             try {
-                const response = await fetch(FighterEngine.soundUrls[i]);
+                const response = await fetch(sound.url);
                 const arrayBuffer = await response.arrayBuffer();
 
                 this.#soundBuffers[i] = await this.#audioCtx.decodeAudioData(arrayBuffer);
             } catch (err) {
-                console.error(`Failed to load sound: ${FighterEngine.soundUrls[i]}`, err);
+                console.error(`Failed to load sound: ${sound.url}`, err);
             }
         }
+
+        for (let i = 0; i <= biggestBus; i++) {
+            const bus = this.#audioCtx.createGain();
+
+            this.#audioBuses.push(bus);
+            bus.connect(this.#audioCtx.destination);
+        }
+
     }
 
-    PlaySound(index, pitch = 1.0, volume = 1) {
+    PlaySound(index, pitch = 1.0, volume = 1, loop = false, fadeInTime = 0) {
         const buffer = this.#soundBuffers[index];
         if (!buffer) return;
 
@@ -860,16 +896,56 @@ export class FighterEngine {
 
         const source = this.#audioCtx.createBufferSource();
         source.buffer = buffer;
+        source.playbackRate.value = pitch;
+        source.loop = loop;
 
         const gainNode = this.#audioCtx.createGain();
-        gainNode.gain.value = this.#volume * volume;
+        
+        // Fade In
+        const targetVolume = this.#volume * volume;
+        const now = this.#audioCtx.currentTime;
 
-        source.playbackRate.value = pitch;
+        if (fadeInTime > 0) {
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(targetVolume, now + (fadeInTime / 1000));
+        } else {
+            gainNode.gain.setValueAtTime(targetVolume, now);
+        }
 
         source.connect(gainNode);
-        gainNode.connect(this.#audioCtx.destination);
+
+        let bus = FighterEngine.soundUrls[index].bus;
+        if (!this.#audioBuses[bus]) bus = 0;
+        gainNode.connect(this.#audioBuses[bus]);
 
         source.start(0);
+
+        return {
+            source,
+            gainNode,
+            StopSound: async (fadeOutTime = 0) => {
+                // Fade Out
+                const stopNow = this.#audioCtx.currentTime;
+
+                if (fadeOutTime > 0) {
+                    gainNode.gain.cancelScheduledValues(stopNow);
+                    gainNode.gain.setValueAtTime(gainNode.gain.value, stopNow);
+                    gainNode.gain.linearRampToValueAtTime(0, stopNow + (fadeOutTime / 1000));
+
+                    source.stop(stopNow + (fadeOutTime / 1000));
+
+                    await this.Wait(fadeOutTime);
+                    try {
+                        source.disconnect();
+                    } catch (e) {}
+                } else {
+                    try {
+                        source.stop();
+                        source.disconnect();
+                    } catch (e) {}
+                }
+            }
+        };
     }
 
 

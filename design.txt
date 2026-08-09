@@ -75,15 +75,16 @@ To do:
         [x] Groan 2
         [x] Hit 1
         [x] Hit 2
-        [ ] Block 1
-        [ ] Block 2
         [x] Jump 1
         [x] Jump 2
-        [ ] Idle
-        [ ] Round Start
-        [ ] Round End
+        [x] Idle
+        [x] Block
+        [ ] Round start
+        [x] Round end
         [x] UI
         [ ] Bottle smash
+        [ ] Speaking
+        [ ] Zoom out (wooop, woooosh)
         [ ] Background noise
         [ ] Music
     [x] Bald Character
@@ -193,27 +194,33 @@ Network Packet JSON:
 
 
 Intro Frame Sizes:
-0:  393x262 (-169, -92)
-11: 230x153 (-72, -44)
+    0:  393x262 (-169, -92)
+    11: 230x153 (-72, -44)
 
-393 - 230 = 163
-163 / 6 = 27.16666
+    393 - 230 = 163
+    163 / 6 = 27.16666
 
-6:  365.833
-7:  338.6664
-8:  311.4998
-9:  284.3332
-10: 257.1666
+    6:  365.833
+    7:  338.6664
+    8:  311.4998
+    9:  284.3332
+    10: 257.1666
 
 
-120 - 230
- x  - 257.1666
+    120 - 230
+    x  - 257.1666
 
-x = (120 * 257.1666) / 230
-x = 134.1739
+    x = (120 * 257.1666) / 230
+    x = 134.1739
 
-6:  190.8694
-7:  176.6955
-8:  162.5216
-9:  148.3478
-10: 134.1739
+    6:  190.8694
+    7:  176.6955
+    8:  162.5216
+    9:  148.3478
+    10: 134.1739
+
+
+Sound Stuff:
+    Screen recording with OBS, preview of sound with TAL BitCrusher (use saved presets)
+    Use command 'ffmpeg -i "input.mkv" -map 0:a:5 -c:a copy track6_audio.mka' to convert mkv (OBS output) to mka
+    Exporting as 48KHz, and unsigned 8-bit PCM

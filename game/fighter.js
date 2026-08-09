@@ -103,6 +103,10 @@ export class Fighter {
     static iconStartSize = { w: 21, h: 21 };
     static iconSize = { w: 9, h: 9 };
 
+    static defaultIdleTimer = 2;
+    #idleTimer = 0;
+    #idleSfx = null;
+
     #networkHitReport = 0;
 
     constructor(engine = null, variant = 0) {
@@ -311,6 +315,24 @@ export class Fighter {
             this.#ghostHealth -= 20 * deltaTime;
             if (this.#ghostHealth < this.#health) this.#ghostHealth = this.#health;
         }
+
+        // Idle Sound
+        if (this.#idleTimer > 0 && this.#engine.gameState === "FIGHTING") {
+            this.#idleTimer -= deltaTime;
+
+            if (this.#idleTimer <= 0) {
+                const isLowHealth = this.#health <= (Fighter.maxHealth / 4);
+
+                const pitch = isLowHealth ? 1.2 + Math.random() * 0.2 : 0.9 + Math.random() * 0.2;
+
+                const volume = isLowHealth ? 0.8 : 0.4;
+
+                this.#idleSfx = this.#engine.PlaySound(9, pitch, volume, true, 3000);
+            }
+        }
+        if (this.#idleSfx && this.#engine.gameState !== "FIGHTING") {
+            this.#idleSfx.StopSound(1000);
+        }
     }
 
     Draw(ctx) {
@@ -517,6 +539,8 @@ export class Fighter {
         if (!this.isPunching && !this.isBlocking && this.isGrounded && !this.isStunned) {
             this.#vel.y -= this.#jumpForce;
 
+            this.Idle();
+
             this.#engine.PlaySound(7 + (Math.random() >= 0.95 ? 1 : 0), 0.9 + Math.random() * 0.2);
         }
     }
@@ -530,16 +554,26 @@ export class Fighter {
             this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
 
+            this.Idle();
+
             this.#engine.PlaySound(1 + (Math.random() >= 0.55 ? 1 : 0), 0.9 + Math.random() * 0.2);
         }
     }
 
     SetBlocking(isHeld) {
-        if (!isHeld) {
+        if (!isHeld && this.#isBlocking != isHeld) {
             this.#isBlocking = isHeld;
+
+            this.Idle();
+
+            this.#engine.PlaySound(7, 0.85 + Math.random() * 0.1, 0.2);
         } else if (isHeld && !this.isPunching && !this.isBlocking && !this.isStunned) {
             this.#isBlocking = isHeld;
             this.#vel.x = 0;
+
+            this.Idle();
+
+            this.#engine.PlaySound(7, 0.85 + Math.random() * 0.1, 0.3);
         }
     }
 
@@ -565,15 +599,24 @@ export class Fighter {
         const diffSpeedRatio = 1 + (diffSpeed / 125) / 2;
         let damage = Fighter.hitboxesDamage[hitboxIndex] * diffSpeedRatio;
 
-        let knockback = 500 * (damage / 30);
+        let knockback = 1000 * (damage / 30);
+
+        this.#ghostTimer = Fighter.defaultGhostTimer;
 
         if (this.isBlocking == 1) {
             damage *= 0.2;
-            knockback = knockback * 0.4;
+            knockback = knockback * .8;
 
-            this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 0.9 + Math.random() * 0.2, .5);
+            this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 1.2 + Math.random() * 0.2, 0.5);
         } else {
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 0.9 + Math.random() * 0.2);
+
+            this.#punchedAnimTimer = Fighter.defaultPunchedAnimTimer;
+            this.#punchedCooldown = Fighter.defaultPunchedCooldown;
+            this.#bloodAnimTimer = Fighter.defaultBloodAnimTimer;
+            this.#bloodAnimState = 0;
+            this.#bloodLoc.x = hitPoint.x;
+            this.#bloodLoc.y = hitPoint.y;
         }
 
         this.#health -= damage;
@@ -582,13 +625,7 @@ export class Fighter {
 
         this.#vel.x += this.#facingRight ? -knockback : knockback;
 
-        this.#ghostTimer = Fighter.defaultGhostTimer;
-        this.#punchedAnimTimer = Fighter.defaultPunchedAnimTimer;
-        this.#punchedCooldown = Fighter.defaultPunchedCooldown;
-        this.#bloodAnimTimer = Fighter.defaultBloodAnimTimer;
-        this.#bloodAnimState = 0;
-        this.#bloodLoc.x = hitPoint.x;
-        this.#bloodLoc.y = hitPoint.y;
+        this.Idle();
 
         let intensity = 1;
         if (this.#health <= 0 && !this.#isDead) {
@@ -626,6 +663,12 @@ export class Fighter {
         this.#celebrating = true;
     }
 
+    Idle() {
+        if (this.#idleSfx) this.#idleSfx.StopSound(1000);
+
+        this.#idleTimer = Fighter.defaultIdleTimer;
+    }
+
     Reset() {
         if (this.#variant == 0) this.#loc.x = 10;
         else this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
@@ -650,6 +693,7 @@ export class Fighter {
         this.#dieAnimState = -1;
         this.#bloodAnimState = -1;
     }
+
 
     // Captures every field that affects simulation or visible presentation
     SerializeState() {

@@ -28,6 +28,7 @@ export class Menu {
     #menuIndex = 0;
     #options = ["START", "VERSUS"];
     #selectedIndex = 0;
+    #hasSelected = false;
     #canSelect = true;
 
     static optionsSize = 8;
@@ -182,7 +183,10 @@ export class Menu {
             this.#engine.canvas.style.cursor = "default";
         }
 
-        if (oldSelected != this.#selectedIndex) this.#engine.PlaySound(0, .95 + Math.random() * 0.2);
+        if (oldSelected != this.#selectedIndex) {
+            if (!this.#hasSelected) this.#engine.PlaySound(0, .95 + Math.random() * 0.1, 0.5);
+            this.#hasSelected = false;
+        }
 
         if (this.#copyTimer > 0) this.#copyTimer -= deltaTime;
     }
@@ -192,7 +196,8 @@ export class Menu {
 
         const choice = this.#options[this.#selectedIndex];
 
-        this.#engine.PlaySound(0, 1.2 + Math.random() * 0.2);
+        this.#engine.PlaySound(0, 1.2 + Math.random() * 0.2, 1.2);
+        this.#hasSelected = true;
 
         switch (choice) {
             case "START":
