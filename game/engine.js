@@ -40,7 +40,9 @@ export class FighterEngine {
     #scoreF1 = 0;
 
     static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
-    static frameStamp = [ 1, 1.15, 1.3, 1.45, 1.6, 3, 3.05, 3.1, 3.15, 3.2, 3.25, 4.75, 6, 6.15, 6.3, 6.45, 6.6, 7.1 ];
+                        //   0     1     2     3     4           5              6     7     8     9    10          11          12    13    14    15          16    17
+    static frameStamp = [    1, 1.15,  1.3, 1.45,  1.6,        3.5,          3.55,  3.6, 3.65,  3.7, 3.75,       5.75,        8.2, 8.35,  8.5, 8.65,        8.8,  9.3 ];
+    static frameSfx =   [ null, null, null, null, null, [21, 1, 1], [24, 1.2, .4], null, null, null, null, [22, 1, 1], [23, 1, 1], null, null, null, [25, 1, 1], null ];
     #introTimer = 0;
     static maxIntroFramesLine = 6;
     static maxIntroState = 18;
@@ -112,17 +114,32 @@ export class FighterEngine {
     #audioCtx = null;
     #audioBuses = [];
     static soundUrls = [
-        { url: "assets/ui1.wav", bus: 1 },
-        { url: "assets/punch_11.wav", bus: 0 },
-        { url: "assets/punch_21.wav", bus: 0 },
-        { url: "assets/hit_11.wav", bus: 0 },
-        { url: "assets/hit_21.wav", bus: 0 },
-        { url: "assets/groan_11.wav", bus: 0 },
-        { url: "assets/groan_21.wav", bus: 0 },
-        { url: "assets/jump_12.wav", bus: 0 },
-        { url: "assets/jump_22.wav", bus: 0 },
-        { url: "assets/idle1.wav", bus: 0 },
-        { url: "assets/cheer1.wav", bus: 0 },
+        /*  0 */ { url: "assets/ui.wav", bus: 1 },
+        /*  1 */ { url: "assets/punch_1.wav", bus: 0 },
+        /*  2 */ { url: "assets/punch_2.wav", bus: 0 },
+        /*  3 */ { url: "assets/hit_1.wav", bus: 0 },
+        /*  4 */ { url: "assets/hit_2.wav", bus: 0 },
+        /*  5 */ { url: "assets/groan_1.wav", bus: 0 },
+        /*  6 */ { url: "assets/groan_2.wav", bus: 0 },
+        /*  7 */ { url: "assets/jump_1.wav", bus: 0 },
+        /*  8 */ { url: "assets/jump_2.wav", bus: 0 },
+        /*  9 */ { url: "assets/step_1.wav", bus: 0 },
+        /* 10 */ { url: "assets/step_2.wav", bus: 0 },
+        /* 11 */ { url: "assets/idle.wav", bus: 0 },
+        /* 12 */ { url: "assets/round1.wav", bus: 0 },
+        /* 13 */ { url: "assets/round2.wav", bus: 0 },
+        /* 14 */ { url: "assets/round3.wav", bus: 0 },
+        /* 15 */ { url: "assets/fight.wav", bus: 0 },
+        /* 16 */ { url: "assets/you_won.wav", bus: 0 },
+        /* 17 */ { url: "assets/you_lost.wav", bus: 0 },
+        /* 18 */ { url: "assets/p1_wins.wav", bus: 0 },
+        /* 19 */ { url: "assets/p2_wins.wav", bus: 0 },
+        /* 20 */ { url: "assets/gameover.wav", bus: 0 },
+        /* 21 */ { url: "assets/dialogue1.wav", bus: 0 },
+        /* 22 */ { url: "assets/dialogue2.wav", bus: 0 },
+        /* 23 */ { url: "assets/dialogue3.wav", bus: 0 },
+        /* 24 */ { url: "assets/zoomout.wav", bus: 0 },
+        /* 25 */ { url: "assets/bottle_breaking.wav", bus: 0 },
     ]
     #soundBuffers = [];
     #volume = .5;
@@ -338,6 +355,12 @@ export class FighterEngine {
                 } 
                 else if (this.#introState < FighterEngine.maxIntroState - 1) {
                     this.#introState++;
+
+                    const frameSFX = FighterEngine.frameSfx[this.#introState];
+                    if (frameSFX) {
+                        console.log(frameSFX, this.#introState)
+                        this.PlaySound(frameSFX[0], frameSFX[1], frameSFX[2]);
+                    }
                 }
             }
 
@@ -692,6 +715,8 @@ export class FighterEngine {
                 this.#uiWinnerTimer = 0;
 
                 this.#uiRoundText = "";
+
+                if (!this.isOnline) this.#audioBuses[0]?.gain.setValueAtTime(1, this.#audioCtx.currentTime);
                 break;
             case 1:
             case "INTRO":
@@ -744,8 +769,8 @@ export class FighterEngine {
         this.#timeScaleTimer = duration / 1000;
     }
 
-    StartRound() {
-        if (this.#rounds == FighterEngine.maxRounds || ((this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1) && this.#gameMode !== "MAIN")) {
+    async StartRound() {
+        if (this.#rounds == FighterEngine.maxRounds || (this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1)) {
             return this.GameOver();
         }
 
@@ -769,6 +794,11 @@ export class FighterEngine {
         }
 
         this.#rounds++;
+
+        await this.Wait(50);
+        this.PlaySound(11 + this.#rounds);
+        await this.Wait(950);
+        this.PlaySound(15, 1, 1, false, 175);
     }
 
     async RoundOver(loser) {
@@ -780,7 +810,6 @@ export class FighterEngine {
         this.#ctrl1?.Reset();
 
         this.SetGameState(4);
-        const cheerSfx = this.PlaySound(10, 1.2, 0.2, true, 100);
         this.#uiRoundText = ``;
 
         await this.Wait(50);
@@ -795,6 +824,8 @@ export class FighterEngine {
         else if (loser == this.fighter1) this.#scoreF0++;
 
         await this.Wait(400);
+        this.#gameMode === "MAIN" ? (loser == this.#fighter0 ? this.PlaySound(17) : this.PlaySound(16)) : loser == this.#fighter0 ? this.PlaySound(19) : this.PlaySound(18);
+
         if (this.#gameState !== "POS_ROUND") return;
         this.#timeScale = 0.1;
 
@@ -804,7 +835,6 @@ export class FighterEngine {
             return;
         }
         this.Fade("#000", 500);
-        cheerSfx.StopSound(750);
         await this.Wait(1200);
         if (this.#gameState !== "POS_ROUND") {
             this.Fade("#000", 0, -1);
@@ -820,7 +850,10 @@ export class FighterEngine {
         this.SetGameState(5);
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
 
-        await this.Wait(4000);
+        await this.Wait(500);
+        this.PlaySound(20);
+
+        await this.Wait(3500);
         if (this.#gameState !== "GAME_OVER") return;
         this.Fade("#000", 500);
         await this.Wait(1200);

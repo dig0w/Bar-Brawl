@@ -13,6 +13,7 @@ export class Fighter {
 
     #groundY = 0;
     #jumpForce = 250;
+    #hasJumped = false;
 
     static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_sheet.png" });
     static bodyImg1 = Object.assign(new Image(), { src: "assets/biker_sheet.png" });
@@ -236,6 +237,10 @@ export class Fighter {
         if (this.#walkingAnimTimer <= 0) {
             this.#walkingAnimState = (this.#walkingAnimState + 1) % Fighter.maxWalkingAnimState;
             this.#walkingAnimTimer += Fighter.defaultWalkingAnimTimer;
+
+            if (this.#walkingAnimState > 0 && (this.#vel.x | 0) != 0) {
+                this.#engine.PlaySound(9 + (Math.random() >= 0.75 ? 1 : 0), 0.95 + Math.random() * 0.1, 0.1);
+            }
         }
 
         // Punch Animation
@@ -316,6 +321,12 @@ export class Fighter {
             if (this.#ghostHealth < this.#health) this.#ghostHealth = this.#health;
         }
 
+        // Land Sound
+        if (this.#hasJumped && this.isGrounded && !this.#celebrating) {
+            this.#engine.PlaySound(9, 0.7 + Math.random() * 0.2, 0.8);
+            this.#hasJumped = false;
+        }
+
         // Idle Sound
         if (this.#idleTimer > 0 && this.#engine.gameState === "FIGHTING") {
             this.#idleTimer -= deltaTime;
@@ -327,7 +338,7 @@ export class Fighter {
 
                 const volume = isLowHealth ? 0.8 : 0.4;
 
-                this.#idleSfx = this.#engine.PlaySound(9, pitch, volume, true, 3000);
+                this.#idleSfx = this.#engine.PlaySound(11, pitch, volume, true, 3000);
             }
         }
         if (this.#idleSfx && this.#engine.gameState !== "FIGHTING") {
@@ -538,6 +549,7 @@ export class Fighter {
     Jump() {
         if (!this.isPunching && !this.isBlocking && this.isGrounded && !this.isStunned) {
             this.#vel.y -= this.#jumpForce;
+            this.#hasJumped = true;
 
             this.Idle();
 
@@ -595,17 +607,32 @@ export class Fighter {
     }
 
     TakeDamage(hitboxIndex, hitPoint, hitSpeed) {
-        const diffSpeed = (hitSpeed - this.#vel.x) * (this.#facingRight ? -1 : 1);
-        const diffSpeedRatio = 1 + (diffSpeed / 125) / 2;
-        let damage = Fighter.hitboxesDamage[hitboxIndex] * diffSpeedRatio;
+        const relativeSpeed = (hitSpeed - this.#vel.x) * (this.#facingRight ? -1 : 1);
+        const scaleFactor = Math.max(0.4, Math.min(1.8, 1 + (relativeSpeed / 150)));
+        let damage = Fighter.hitboxesDamage[hitboxIndex] * scaleFactor;
 
-        let knockback = 1000 * (damage / 30);
+        const cubicInterp = (x, p1, p2) => {
+            const t = Math.max(0, Math.min(1, (x - p1.x) / (p2.x - p1.x)));
+            const smoothT = t * t * (3 - 2 * t);
+            return p1.y + (p2.y - p1.y) * smoothT;
+        };
+
+        let knockback = 800;
+        if (relativeSpeed < -20) {
+            knockback = cubicInterp(relativeSpeed, { x: -74, y: 30 }, { x: -20, y: 135 });
+        } else if (relativeSpeed < 0) {
+            knockback = cubicInterp(relativeSpeed, { x: -20, y: 135 }, { x: 0, y: 800 })
+        } else if (relativeSpeed < 20) {
+            knockback = cubicInterp(relativeSpeed, { x: 0, y: 800 }, { x: 20, y: 255 })
+        } else {
+            knockback = cubicInterp(relativeSpeed, { x: 20, y: 255 }, { x: 74, y: 150 })
+        }
 
         this.#ghostTimer = Fighter.defaultGhostTimer;
 
         if (this.isBlocking == 1) {
             damage *= 0.2;
-            knockback = knockback * .8;
+            knockback *= 0.6;
 
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 1.2 + Math.random() * 0.2, 0.5);
         } else {
@@ -685,6 +712,7 @@ export class Fighter {
         this.#ghostHealth = this.#health;
 
         this.moveInput = 0;
+        this.#hasJumped = false;
         this.#punchAnimState = -1;
         this.#punchCooldown = 0;
         this.#isBlocking = false;

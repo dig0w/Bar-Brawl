@@ -79,13 +79,12 @@ To do:
         [x] Jump 2
         [x] Idle
         [x] Block
-        [ ] Round start
+        [x] Round start
         [x] Round end
         [x] UI
-        [ ] Bottle smash
-        [ ] Speaking
-        [ ] Zoom out (wooop, woooosh)
-        [ ] Background noise
+        [x] Dialogue
+        [x] Zoom out
+        [?] Bottle breaking
         [ ] Music
     [x] Bald Character
         [x] Idling
