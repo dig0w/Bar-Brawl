@@ -113,33 +113,34 @@ export class FighterEngine {
 
     #audioCtx = null;
     #audioBuses = [];
-    static soundUrls = [
-        /*  0 */ { url: "assets/ui.wav", bus: 1 },
-        /*  1 */ { url: "assets/punch_1.wav", bus: 0 },
-        /*  2 */ { url: "assets/punch_2.wav", bus: 0 },
-        /*  3 */ { url: "assets/hit_1.wav", bus: 0 },
-        /*  4 */ { url: "assets/hit_2.wav", bus: 0 },
-        /*  5 */ { url: "assets/groan_1.wav", bus: 0 },
-        /*  6 */ { url: "assets/groan_2.wav", bus: 0 },
-        /*  7 */ { url: "assets/jump_1.wav", bus: 0 },
-        /*  8 */ { url: "assets/jump_2.wav", bus: 0 },
-        /*  9 */ { url: "assets/step_1.wav", bus: 0 },
-        /* 10 */ { url: "assets/step_2.wav", bus: 0 },
-        /* 11 */ { url: "assets/idle.wav", bus: 0 },
-        /* 12 */ { url: "assets/round1.wav", bus: 0 },
-        /* 13 */ { url: "assets/round2.wav", bus: 0 },
-        /* 14 */ { url: "assets/round3.wav", bus: 0 },
-        /* 15 */ { url: "assets/fight.wav", bus: 0 },
-        /* 16 */ { url: "assets/you_won.wav", bus: 0 },
-        /* 17 */ { url: "assets/you_lost.wav", bus: 0 },
-        /* 18 */ { url: "assets/p1_wins.wav", bus: 0 },
-        /* 19 */ { url: "assets/p2_wins.wav", bus: 0 },
-        /* 20 */ { url: "assets/gameover.wav", bus: 0 },
-        /* 21 */ { url: "assets/dialogue1.wav", bus: 0 },
-        /* 22 */ { url: "assets/dialogue2.wav", bus: 0 },
-        /* 23 */ { url: "assets/dialogue3.wav", bus: 0 },
-        /* 24 */ { url: "assets/zoomout.wav", bus: 0 },
-        /* 25 */ { url: "assets/bottle_breaking.wav", bus: 0 },
+    static soundFix = [ "assets/", ".ogg" ]
+    static sounds = [
+        /*  0 */ { name: "ui", bus: 1 },
+        /*  1 */ { name: "punch_1", bus: 0 },
+        /*  2 */ { name: "punch_2", bus: 0 },
+        /*  3 */ { name: "hit_1", bus: 0 },
+        /*  4 */ { name: "hit_2", bus: 0 },
+        /*  5 */ { name: "groan_1", bus: 0 },
+        /*  6 */ { name: "groan_2", bus: 0 },
+        /*  7 */ { name: "jump_1", bus: 0 },
+        /*  8 */ { name: "jump_2", bus: 0 },
+        /*  9 */ { name: "step_1", bus: 0 },
+        /* 10 */ { name: "step_2", bus: 0 },
+        /* 11 */ { name: "idle", bus: 0 },
+        /* 12 */ { name: "round1", bus: 0 },
+        /* 13 */ { name: "round2", bus: 0 },
+        /* 14 */ { name: "round3", bus: 0 },
+        /* 15 */ { name: "fight", bus: 0 },
+        /* 16 */ { name: "you_won", bus: 0 },
+        /* 17 */ { name: "you_lost", bus: 0 },
+        /* 18 */ { name: "p1_wins", bus: 0 },
+        /* 19 */ { name: "p2_wins", bus: 0 },
+        /* 20 */ { name: "gameover", bus: 0 },
+        /* 21 */ { name: "dialogue1", bus: 0 },
+        /* 22 */ { name: "dialogue2", bus: 0 },
+        /* 23 */ { name: "dialogue3", bus: 0 },
+        /* 24 */ { name: "zoomout", bus: 0 },
+        /* 25 */ { name: "bottle_breaking", bus: 0 },
     ]
     #soundBuffers = [];
     #volume = .5;
@@ -895,18 +896,18 @@ export class FighterEngine {
 
         let biggestBus = 0;
 
-        for (let i = 0; i < FighterEngine.soundUrls.length; i++) {
-            const sound = FighterEngine.soundUrls[i];
+        for (let i = 0; i < FighterEngine.sounds.length; i++) {
+            const sound = FighterEngine.sounds[i];
 
             if (sound.bus > biggestBus) biggestBus = sound.bus;
 
             try {
-                const response = await fetch(sound.url);
+                const response = await fetch(FighterEngine.soundFix[0] + sound.name + FighterEngine.soundFix[1]);
                 const arrayBuffer = await response.arrayBuffer();
 
                 this.#soundBuffers[i] = await this.#audioCtx.decodeAudioData(arrayBuffer);
             } catch (err) {
-                console.error(`Failed to load sound: ${sound.url}`, err);
+                console.error(`Failed to load sound: ${sound.name}`, err);
             }
         }
 
@@ -947,7 +948,7 @@ export class FighterEngine {
 
         source.connect(gainNode);
 
-        let bus = FighterEngine.soundUrls[index].bus;
+        let bus = FighterEngine.sounds[index].bus;
         if (!this.#audioBuses[bus]) bus = 0;
         gainNode.connect(this.#audioBuses[bus]);
 

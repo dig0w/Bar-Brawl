@@ -223,3 +223,8 @@ Sound Stuff:
     Screen recording with OBS, preview of sound with TAL BitCrusher (use saved presets)
     Use command 'ffmpeg -i "input.mkv" -map 0:a:5 -c:a copy track6_audio.mka' to convert mkv (OBS output) to mka
     Exporting as 48KHz, and unsigned 8-bit PCM
+
+Optimization:
+    JS: npx esbuild engine.js --bundle --minify --format=esm --outfile=game.min.js
+    Images: https://tinypng.com/
+    Audio: ffmpeg -i input.wav -ar 32000 -c:a libvorbis -q:a 4 output.ogg

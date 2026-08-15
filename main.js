@@ -1,4 +1,4 @@
-import { FighterEngine } from "./game/engine.js";
+import { FighterEngine } from "./game/game.min.js";
 
 const fixedDeltaTime = 1 / 60;
 
