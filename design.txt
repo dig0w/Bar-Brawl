@@ -84,8 +84,10 @@ To do:
         [x] UI
         [x] Dialogue
         [x] Zoom out
-        [?] Bottle breaking
-        [ ] Music
+        [x] Bottle breaking (Bottles Breaking.wav by Tim_Verberne)
+        [ ] Round music
+        [ ] Menu music
+        [x] Intro back noise (Sound of an Irish Pub by jonnymccullagh)
     [x] Bald Character
         [x] Idling
         [x] Walking
@@ -134,7 +136,7 @@ To do:
     [x] Gamemodes
         [x] Local PvP               (Versus -> Local)
         [x] Local AI                (Start)
-            [?] AI should force the third round (if looses first should became super hard)
+            [ ] AI should force the third round (if looses first should became super hard)?
         [x] Online (peer-to-peer)   (Versus -> Online)
     [x] AI
         [x] Attack state (it should rush the opponent and punch)

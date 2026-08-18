@@ -15,7 +15,6 @@ export class FighterEngine {
     #canvasSize = { w: 120, h: 80 };
     #canvas = null;
     #ctx = null;
-    #objects = [];
 
     static barImage = Object.assign(new Image(), { src: "assets/bar.png" });
     static barImageSize = { w: 128, h: 80 };
@@ -38,11 +37,13 @@ export class FighterEngine {
     #rounds = 0;
     #scoreF0 = 0;
     #scoreF1 = 0;
+    static maxRoundTime = 3;
+    #roundTime = 1;
 
     static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
                         //   0     1     2     3     4           5              6     7     8     9    10          11          12    13    14    15          16    17
     static frameStamp = [    1, 1.15,  1.3, 1.45,  1.6,        3.5,          3.55,  3.6, 3.65,  3.7, 3.75,       5.75,        8.2, 8.35,  8.5, 8.65,        8.8,  9.3 ];
-    static frameSfx =   [ null, null, null, null, null, [21, 1, 1], [24, 1.2, .4], null, null, null, null, [22, 1, 1], [23, 1, 1], null, null, null, [25, 1, 1], null ];
+    static frameSfx =   [ null, null, null, null, null, [22, 1, 1], [25, 1.2, .4], null, null, null, null, [23, 1, 1], [24, 1, 1], null, null, null, [26, 1, 1], null ];
     #introTimer = 0;
     static maxIntroFramesLine = 6;
     static maxIntroState = 18;
@@ -68,6 +69,7 @@ export class FighterEngine {
 
     static defaultUiGameOverTimer = .25;
     #uiGameOverTimer = 0;
+    #uiGameOverText = "";
 
     static defaultUiCreditsTimer = 8;
     #uiCreditsTimer = 0;
@@ -135,15 +137,20 @@ export class FighterEngine {
         /* 17 */ { name: "you_lost", bus: 0 },
         /* 18 */ { name: "p1_wins", bus: 0 },
         /* 19 */ { name: "p2_wins", bus: 0 },
-        /* 20 */ { name: "gameover", bus: 0 },
-        /* 21 */ { name: "dialogue1", bus: 0 },
-        /* 22 */ { name: "dialogue2", bus: 0 },
-        /* 23 */ { name: "dialogue3", bus: 0 },
-        /* 24 */ { name: "zoomout", bus: 0 },
-        /* 25 */ { name: "bottle_breaking", bus: 0 },
+        /* 20 */ { name: "draw", bus: 0 },
+        /* 21 */ { name: "gameover", bus: 0 },
+        /* 22 */ { name: "dialogue1", bus: 0 },
+        /* 23 */ { name: "dialogue2", bus: 0 },
+        /* 24 */ { name: "dialogue3", bus: 0 },
+        /* 25 */ { name: "zoomout", bus: 0 },
+        /* 26 */ { name: "bottle_breaking", bus: 0 },
+        /* 27 */ { name: "music_menu", bus: 2 },
+        /* 28 */ { name: "music_round", bus: 2 },
+        /* 29 */ { name: "music_intro", bus: 2 },
     ]
     #soundBuffers = [];
     #volume = .5;
+    #musicSfx = null;
 
     constructor() { }
 
@@ -171,10 +178,11 @@ export class FighterEngine {
     get ctrl0() { return this.#ctrl0; }
     get ctrl1() { return this.#ctrl1; }
     get mainMenu() { return this.#mainMenu; }
+    get musicSfx() { return this.#musicSfx; }
 
     getScore(fighter) { return fighter === this.#fighter0 ? this.#scoreF0 : this.#scoreF1; }
 
-    Begin() {
+    async Begin() {
         this.#canvas = document.getElementById("game-canvas");
 
         this.#canvas.width = this.#canvasSize.w * 2;
@@ -190,13 +198,9 @@ export class FighterEngine {
         this.#worldWidth = this.#canvasSize.w;
 
         this.#fighter0 = new Fighter(this, 0);
-        this.#objects.push(this.#fighter0);
         this.#fighter1 = new Fighter(this, 1);
-        this.#objects.push(this.#fighter1);
-
-        for (let i = 0; i < this.#objects.length; i++) {
-            this.#objects[i].Begin();
-        }
+        this.#fighter0.Begin();
+        this.#fighter1.Begin();
 
         this.#uiRoundLoc.x *= this.#canvas.width;
         this.#uiRoundLoc.y *= this.#canvas.height;
@@ -204,28 +208,33 @@ export class FighterEngine {
         this.#uiRoundAfterLoc.x *= this.#canvas.width;
 
         FighterEngine.uiSheet.onload = () => {
-            this.#redFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "r");
-            this.#greenFontSheet = FighterEngine.extractChannelMask(FighterEngine.uiSheet, "g");
+            this.#redFontSheet = FighterEngine.#extractChannelMask(FighterEngine.uiSheet, "r");
+            this.#greenFontSheet = FighterEngine.#extractChannelMask(FighterEngine.uiSheet, "g");
         }
-
-        this.SetGameState(0);
-
-        this.#preloadSounds();
 
         window.onbeforeunload = () => {
             this.Disconnect();
         };
 
-        const handleAutoPause = () => {
+        const handleAutoPause = async () => {
             if (!this.isOnline && !this.#gamePaused && this.#gameState !== "MENU") {
                 this.Pause();
-            }
+            } else return;
+
+            await this.Wait(50);
+            handleAutoPause();
         };
 
         window.addEventListener("blur", handleAutoPause);
         document.addEventListener("visibilitychange", () => {
             if (document.hidden) handleAutoPause();
         });
+
+        this.SetGameState(0);
+
+        await this.#preloadSounds();
+
+        this.#musicSfx = this.PlaySound(27, 1, 0.4, true, 1000);
     }
 
     Tick(deltaTime) {
@@ -320,17 +329,56 @@ export class FighterEngine {
             }
             const activeDeltaTime = deltaTime * (this.#gamePaused && !this.isOnline ? 0 : this.#timeScale);
 
-            // Only tick objects if the simulation is unlocked
-            for (let i = this.#objects.length - 1; i >= 0; i--) {
-                const obj = this.#objects[i];
-                // Skip controllers
-                if (!(obj instanceof Controller || obj instanceof AIController)) {
-                    obj.Tick(activeDeltaTime);
+            this.#fighter0.Tick(activeDeltaTime);
+            this.#fighter1.Tick(activeDeltaTime);
+
+            this.#fighter0.ResolvePendingDamage();
+            this.#fighter1.ResolvePendingDamage();
+
+            if (this.gameState === "FIGHTING") {
+                if (this.#fighter0.health <= 0 && this.#fighter1.health <= 0) {
+                    this.RoundOver(null, true);
+                } else if (this.#fighter0.health <= 0) {
+                    this.RoundOver(this.#fighter0);
+                } else if (this.#fighter1.health <= 0) {
+                    this.RoundOver(this.#fighter1);
                 }
             }
 
             if (this.isOnline || (this.#gameState === "FIGHTING" && !this.#gamePaused)) {
                 this.#currentFrame = (this.#currentFrame + 1) >>> 0;
+
+                if (this.#roundTime > 0) {
+                    this.#roundTime -= deltaTime;
+
+                    if (this.#roundTime <= 0) {
+                        this.#roundTime = 0;
+                        if (Math.abs(this.#fighter0.health - this.#fighter1.health) <= 1) {
+                            this.RoundOver(null, true);
+                        } else {
+                            this.RoundOver(this.#fighter0.health > this.#fighter1.health ? this.#fighter1 : this.#fighter0);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fade Sreen
+        if (this.#fadeDirection !== 0) {
+            this.#fadeTimer += deltaTime;
+
+            const dir = this.#fadeDirection;
+
+            let t = this.#fadeTimer / this.#fadeDuration;
+            if (t >= 1) {
+                t = 1;
+                this.#fadeDirection = 0;
+            }
+
+            if (dir === 1) {
+                this.#fadeAlpha = t;
+            } else if (dir === -1) {
+                this.#fadeAlpha = 1 - t;
             }
         }
 
@@ -359,7 +407,6 @@ export class FighterEngine {
 
                     const frameSFX = FighterEngine.frameSfx[this.#introState];
                     if (frameSFX) {
-                        console.log(frameSFX, this.#introState)
                         this.PlaySound(frameSFX[0], frameSFX[1], frameSFX[2]);
                     }
                 }
@@ -370,8 +417,9 @@ export class FighterEngine {
             }
 
             if (this.#introState >= FighterEngine.maxIntroState && this.#fadeTimer >= this.#fadeDuration) {
-                this.SetGameState(2); 
+                if (this.#musicSfx) this.#musicSfx.StopSound(500);
                 this.Fade("#000", 500, -1);
+                this.SetGameState(2);
             }
         }
 
@@ -416,7 +464,7 @@ export class FighterEngine {
             this.#uiWinnerTimer -= deltaTime;
         }
 
-
+        // Shake Screen
         if (this.#shakeTimer > 0) {
             this.#shakeTimer -= deltaTime;
 
@@ -430,24 +478,6 @@ export class FighterEngine {
 
                 this.#shakeOffset.x = (Math.random() * 2 - 1) * currentPower;
                 this.#shakeOffset.y = (Math.random() * 2 - 1) * currentPower;
-            }
-        }
-
-        if (this.#fadeDirection !== 0) {
-            this.#fadeTimer += deltaTime;
-
-            const dir = this.#fadeDirection;
-
-            let t = this.#fadeTimer / this.#fadeDuration;
-            if (t >= 1) {
-                t = 1;
-                this.#fadeDirection = 0;
-            }
-
-            if (dir === 1) {
-                this.#fadeAlpha = t;
-            } else if (dir === -1) {
-                this.#fadeAlpha = 1 - t;
             }
         }
     }
@@ -520,10 +550,9 @@ export class FighterEngine {
         this.#ctx.save();
         this.#ctx.translate((scrollX | 0), 0);
 
-        if (this.#gameState !== "CREDITS" && this.#gameState !== "INTRO") {
-            for (let i = 0; i < this.#objects.length; i++) {
-                this.#objects[i].Draw(this.#ctx);
-            }
+        if (this.#gameState !== "GAME_OVER" && this.#gameState !== "CREDITS" && this.#gameState !== "INTRO") {
+            this.#fighter0.Draw(this.#ctx);
+            this.#fighter1.Draw(this.#ctx);
         }
 
         this.#ctx.restore();
@@ -533,9 +562,8 @@ export class FighterEngine {
             this.#ctx.drawImage(FighterEngine.barImage, FighterEngine.barImageSize.w * 3, this.#barFrame * FighterEngine.barImageSize.h, FighterEngine.barImageSize.w, FighterEngine.barImageSize.h, (scrollX | 0), 0, (this.#worldWidth | 0), (this.#canvasSize.h | 0));
         }
 
-        for (let i = 0; i < this.#objects.length; i++) {
-            if (this.#objects[i].DrawUI) this.#objects[i].DrawUI(this.#ctx);
-        }
+        this.#fighter0.DrawUI(this.#ctx);
+        this.#fighter1.DrawUI(this.#ctx);
 
         this.#ctx.restore();
         this.#ctx.save();
@@ -567,7 +595,17 @@ export class FighterEngine {
                 fontSize *= (1 - percent);
             }
 
-            this.DrawPixelText(this.#ctx, "Game Over", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, this.#uiGameOverText, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y - 17 | 0), (fontSize | 0), FighterEngine.uiRoundFillColor, "#00000000");
+
+            this.DrawPixelText(this.#ctx, `${this.#scoreF0} - ${this.#scoreF1}`, (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y | 0), (fontSize * 0.75 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+
+            this.DrawPixelText(this.#ctx, "Game Over", (this.#uiRoundLoc.x | 0), (this.#uiRoundLoc.y + 17 | 0), (fontSize | 0), FighterEngine.uiRoundFillColor, "#00000000");
+
+            this.#ctx.save();
+            this.#ctx.scale(2, 2);
+            this.#fighter0.Draw(this.#ctx);
+            this.#fighter1.Draw(this.#ctx);
+            this.#ctx.restore();
         }
 
         if (this.#uiRoundTimer > 0) {
@@ -582,6 +620,10 @@ export class FighterEngine {
             this.DrawPixelText(this.#ctx, this.#uiRoundText, (locX | 0), (locY | 0), (fontSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
         } else if (this.#uiRoundText != "") {
             this.DrawPixelText(this.#ctx, this.#uiRoundText, (this.#uiRoundAfterLoc.x | 0), (this.#uiRoundAfterLoc.y | 0), (FighterEngine.uiRoundAfterSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
+        }
+
+        if (this.#uiRoundTimer > 0 || this.#uiRoundAfterTimer > 0 || this.#uiRoundText != "") {
+            this.DrawPixelText(this.#ctx, `${Math.min(this.#roundTime + 1 | 0, FighterEngine.maxRoundTime)}`, (this.#uiRoundAfterLoc.x | 0), (this.#uiRoundAfterLoc.y + FighterEngine.uiRoundAfterSize + 2 | 0), (FighterEngine.uiRoundAfterSize | 0), FighterEngine.uiRoundFillColor, FighterEngine.uiRoundOutlineColor);
         }
 
         if (this.#uiFightTimer > 0) {
@@ -635,53 +677,37 @@ export class FighterEngine {
         this.#ctx.restore();
     }
 
-    DestroyObject(obj) {
-        const index = this.#objects.indexOf(obj);
-        if (index !== -1) {
-            this.#objects[index] = null;
-            this.#objects.splice(index, 1);
-        }
-    }
-
     SetGameState(state, mode = -1) {
         // States = MENU INTRO PRE_ROUND FIGHTING POS_ROUND GAME_OVER CREDITS
         // Modes = CAREER VERSUS_LOCAL VERSUS_HOST VERSUS_CLIENT
         if (mode >= 0) {
-            this.DestroyObject(this.#ctrl0);
-            this.DestroyObject(this.#ctrl1);
+            this.#ctrl0 = null;
+            this.#ctrl1 = null;
 
             switch (mode) {
                 case 0:
                 case "MAIN":
                     this.#gameMode = "MAIN";
                     this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
-                    this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new AIController(this, this.#fighter1, .8);
-                    this.#objects.push(this.#ctrl1);
                     break;
                 case 1:
                 case "VERSUS_LOCAL":
                     this.#gameMode = "VERSUS_LOCAL";
                     this.#ctrl0 = new Controller(this, this.#fighter0, 0, 0);
-                    this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new Controller(this, this.#fighter1, 1, 1);
-                    this.#objects.push(this.#ctrl1);
                     break;
                 case 2:
                 case "VERSUS_HOST":
                     this.#gameMode = "VERSUS_HOST";
                     this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
-                    this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new Controller(this, this.#fighter1, 0, 1, true);
-                    this.#objects.push(this.#ctrl1);
                     break;
                 case 3:
                 case "VERSUS_CLIENT":
                     this.#gameMode = "VERSUS_CLIENT";
                     this.#ctrl0 = new Controller(this, this.#fighter1, 2, 0);
-                    this.#objects.push(this.#ctrl0);
                     this.#ctrl1 = new Controller(this, this.#fighter0, 0, 1, true);
-                    this.#objects.push(this.#ctrl1);
                     break;
             }
 
@@ -717,6 +743,8 @@ export class FighterEngine {
 
                 this.#uiRoundText = "";
 
+                this.#musicSfx = this.PlaySound(27, 1, 0.4, true, 1000);
+
                 if (!this.isOnline) this.#audioBuses[0]?.gain.setValueAtTime(1, this.#audioCtx.currentTime);
                 break;
             case 1:
@@ -727,6 +755,8 @@ export class FighterEngine {
 
                 this.#introTimer = 0;
                 this.#introState = 0;
+
+                this.#musicSfx = this.PlaySound(29, 1, 0.25, true, 500);
                 break;
             case 2:
             case "PRE_ROUND":
@@ -771,7 +801,7 @@ export class FighterEngine {
     }
 
     async StartRound() {
-        if (this.#rounds == FighterEngine.maxRounds || (this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1)) {
+        if (this.#scoreF0 == FighterEngine.maxRounds - 1 || this.#scoreF1 == FighterEngine.maxRounds - 1 || this.#rounds == FighterEngine.maxRounds) {
             return this.GameOver();
         }
 
@@ -795,17 +825,19 @@ export class FighterEngine {
         }
 
         this.#rounds++;
+        this.#roundTime = FighterEngine.maxRoundTime;
 
+        this.#musicSfx = this.PlaySound(28, 1, 0.4, true, 1000);
         await this.Wait(50);
         this.PlaySound(11 + this.#rounds);
         await this.Wait(950);
         this.PlaySound(15, 1, 1, false, 175);
     }
 
-    async RoundOver(loser) {
-        if (!loser || (loser != this.#fighter0 && loser != this.#fighter1)) return;
-
-        const winner = loser == this.#fighter0 ? this.#fighter1 : this.#fighter0;
+    async RoundOver(loser, draw = false) {
+        if (!Boolean((loser != null) ^ draw)) return;
+        if (loser && loser != this.#fighter0 && loser != this.#fighter1) return;
+        if (this.#gameState !== "FIGHTING") return;
 
         this.#ctrl0.Reset();
         this.#ctrl1?.Reset();
@@ -817,19 +849,33 @@ export class FighterEngine {
         if (this.#gameState !== "POS_ROUND") return;
 
         this.#uiWinnerTimer = FighterEngine.defaultUiWinnerTimer;
-        this.#uiWinnerText = this.#gameMode === "MAIN" ? (loser == this.#fighter0 ? "You Lost!" : "You Won!") : `${loser == this.#fighter0 ? "P2" : "P1"} Wins!`;
+        if (!draw) {
+            if (loser == this.#fighter0) {
+                this.#uiWinnerText = this.#gameMode === "MAIN" ? "You Lost!" : "P2 Wins!";
 
-        winner.Celebrate();
+                this.#fighter1.Celebrate();
+                this.#scoreF1++
+            } else {
+                this.#uiWinnerText = this.#gameMode === "MAIN" ? "You Won!" : "P1 Wins!";
 
-        if (loser == this.fighter0) this.#scoreF1++;
-        else if (loser == this.fighter1) this.#scoreF0++;
+                this.#fighter0.Celebrate();
+                this.#scoreF0++
+            }
+        } else {
+            this.#uiWinnerText = "Draw!";
+        }
 
         await this.Wait(400);
-        this.#gameMode === "MAIN" ? (loser == this.#fighter0 ? this.PlaySound(17) : this.PlaySound(16)) : loser == this.#fighter0 ? this.PlaySound(19) : this.PlaySound(18);
+        if (!draw) {
+            this.#gameMode === "MAIN" ? (loser == this.#fighter0 ? this.PlaySound(17) : this.PlaySound(16)) : loser == this.#fighter0 ? this.PlaySound(19) : this.PlaySound(18);
+        } else {
+            this.PlaySound(20);
+        }
 
         if (this.#gameState !== "POS_ROUND") return;
         this.#timeScale = 0.1;
 
+        if (this.#musicSfx) this.#musicSfx.StopSound(1000);
         await this.Wait(400);
         if (this.#gameState !== "POS_ROUND") {
             this.#timeScale = 1;
@@ -851,8 +897,27 @@ export class FighterEngine {
         this.SetGameState(5);
         this.#uiGameOverTimer = FighterEngine.defaultUiGameOverTimer;
 
+        if (this.#scoreF0 != this.#scoreF1) {
+            if (this.#scoreF0 < this.#scoreF1) {
+                this.#uiGameOverText = this.#gameMode === "MAIN" ? "You Lost" : "P2 Wins";
+
+                this.#fighter0.EndState(0);
+                this.#fighter1.EndState(1);
+            } else {
+                this.#uiGameOverText = this.#gameMode === "MAIN" ? "You Won" : "P1 Wins";
+
+                this.#fighter0.EndState(1);
+                this.#fighter1.EndState(0);
+            }
+        } else {
+            this.#uiGameOverText = "Double Loss";
+
+            this.#fighter0.EndState(0);
+            this.#fighter1.EndState(0);
+        }
+
         await this.Wait(500);
-        this.PlaySound(20);
+        this.PlaySound(21);
 
         await this.Wait(3500);
         if (this.#gameState !== "GAME_OVER") return;
@@ -870,6 +935,8 @@ export class FighterEngine {
     }
 
     Pause() {
+        if (this.#fadeDirection !== 0 || this.#fadeAlpha !== 0 || this.#gameState === "MENU" || this.#gameState === "GAME_OVER" || this.#gameState === "CREDITS") return;
+
         this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
         this.#mainMenu.fadeDirection = -1;
 
@@ -881,11 +948,14 @@ export class FighterEngine {
     }
 
     async Resume() {
+        if (this.#fadeDirection !== 0 || this.#fadeAlpha !== 0) return;
+
         this.#mainMenu.fadeTimer = Menu.defaultFadeTimer;
         this.#mainMenu.fadeDirection = 1;
         await this.Wait(Menu.defaultFadeTimer * 1000);
 
         this.#gamePaused = false;
+        this.#canvas.style.cursor = "none";
 
         if (!this.isOnline) this.#audioBuses[0].gain.setValueAtTime(1, this.#audioCtx.currentTime);
     }
@@ -917,7 +987,6 @@ export class FighterEngine {
             this.#audioBuses.push(bus);
             bus.connect(this.#audioCtx.destination);
         }
-
     }
 
     PlaySound(index, pitch = 1.0, volume = 1, loop = false, fadeInTime = 0) {
@@ -1043,7 +1112,7 @@ export class FighterEngine {
         const spacing = 0;
         const spaceWidth = (outSize.w / 3) | 0;
 
-        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?_,"]
+        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?_,-"]
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {
@@ -1115,10 +1184,9 @@ export class FighterEngine {
         this.#fadeDuration = duration / 1000;
         this.#fadeTimer = 0;
         this.#fadeDirection = direction;
-        this.#fadeAlpha = 0;
     }
 
-    static extractChannelMask(image, channel = "r") {
+    static #extractChannelMask(image, channel = "r") {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
 

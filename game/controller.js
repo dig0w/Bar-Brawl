@@ -166,8 +166,6 @@ export class Controller {
         }
     }
 
-    Draw(ctx) { }
-
     Reset() {
         this.#keys = {};
         this.#jumpReleased = true;

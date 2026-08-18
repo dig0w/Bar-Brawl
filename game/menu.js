@@ -370,6 +370,8 @@ export class Menu {
     async StartGame(mode, state = 2) {
         this.#canSelect = false;
 
+        if (this.#engine.musicSfx) this.#engine.musicSfx.StopSound(1000);
+
         await this.#engine.Wait(400);
         if (this.#canSelect) return;
         this.#engine.Fade("#000", 500);

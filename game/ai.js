@@ -96,8 +96,6 @@ export class AIController {
         this.#lastDistance = distance;
     }
 
-    Draw(ctx) { }
-
     Reset() {
         this.#pawn.moveInput = 0;
     }

@@ -253,6 +253,7 @@ export class NetworkManager {
 
         this.#closeSignaling();
         this.#sessionCode = null;
+        if (this.#engine.musicSfx) this.#engine.musicSfx.StopSound(1000);
         this.#engine.SetGameState(0, 0);
     }
 

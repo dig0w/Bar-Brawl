@@ -83,8 +83,9 @@ export class Fighter {
     #fistHitBoxOffsetStart = null;
     #fistHitBoxOffsetEnd = null;
     #fistHitBox = null;
+    #pendingHit = null;
 
-    static hitboxesDamage = [15, 10, 7, 7, 5, 5];
+    static hitboxesDamage = [7.5, 5, 3.5, 3.5, 2.5, 2.5];
     // static hitboxesDamage = [2000, 2000, 2000, 2000, 2000, 2000];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
@@ -277,10 +278,9 @@ export class Fighter {
                         const { intersected, hitPoint } = Intersects(this.#fistHitBox, hitbox);
                         if (intersected) {
                             this.#punchHasHit = true;
-
                             this.#engine.PlaySound(3 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
 
-                            opponent.TakeDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0)}, Number(this.#vel.x.toFixed(2)));
+                            opponent.QueueDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0) }, Number(this.#vel.x.toFixed(2)));
                             break;
                         }
                     }
@@ -352,16 +352,31 @@ export class Fighter {
         // Shadow
         const y = this.#engine.groundY;
         const x = this.#loc.x + (this.#size.w / 2) + ((Fighter.shadowSize.w / 2 - 2) * (this.#facingRight ? -1 : 1));
-        const heightFactor = Math.max(0, 1 + ((this.#loc.y - y + 39) / (Fighter.shadowJump * 2)));
+        const heightFactor = Math.max(0, 1 + ((this.#loc.y - y + 39) / (Fighter.shadowJump * -1.75)));
+        const rx = Fighter.shadowSize.w * heightFactor;
+        const ry = Fighter.shadowSize.h * heightFactor;
+        const centerY = y - Fighter.shadowSize.h / 2;
+        const invRx2 = 1 / (rx * rx);
+        const invRy2 = 1 / (ry * ry);
+        const maxPy = Math.ceil(ry);
+        const maxPx = Math.ceil(rx);
 
         ctx.save();
-        ctx.beginPath();
+        ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(Fighter.shadowOpacity, Fighter.shadowOpacity * heightFactor * 0.75)})`;
 
-        ctx.fillStyle = `rgba(0, 0, 0, ${Fighter.shadowOpacity * heightFactor})`;
+        for (let py = -maxPy; py <= maxPy; py++) {
+            const ny2 = (py + 0.5) * (py + 0.5) * invRy2;
+            const drawY = Math.floor(centerY + py);
 
-        ctx.ellipse(x, y - Fighter.shadowSize.h / 2, Fighter.shadowSize.w * heightFactor, Fighter.shadowSize.h * heightFactor, 0, 0, Math.PI * 2);
-        
-        ctx.fill();
+            for (let px = -maxPx; px <= maxPx; px++) {
+                const nx2 = (px + 0.5) * (px + 0.5) * invRx2;
+
+                if (nx2 + ny2 <= 1) {
+                    ctx.fillRect(Math.floor(x + px), drawY, 1, 1);
+                }
+            }
+        }
+
         ctx.restore();
 
 
@@ -666,9 +681,19 @@ export class Fighter {
         this.#engine.SlowTime(0, 100);
     }
 
-    Die() {
-        this.#engine.RoundOver(this);
+    QueueDamage(hitboxIndex, hitPoint, hitSpeed) {
+        this.#pendingHit = { hitboxIndex, hitPoint, hitSpeed };
+    }
 
+    ResolvePendingDamage() {
+        if (this.#pendingHit) {
+            const { hitboxIndex, hitPoint, hitSpeed } = this.#pendingHit;
+            this.#pendingHit = null;
+            this.TakeDamage(hitboxIndex, hitPoint, hitSpeed);
+        }
+    }
+
+    Die() {
         this.#punchAnimState = -1;
         this.#isBlocking = false;
 
@@ -688,6 +713,21 @@ export class Fighter {
 
         await this.#engine.Wait(50);
         this.#celebrating = true;
+    }
+
+    EndState(state) {
+        this.#punchAnimState = -1;
+        this.#isBlocking = false;
+
+        switch (state) {
+            case 0:
+                this.#health = 0;
+                this.#dieAnimState = 2;
+                break;
+            case 1:
+                this.#celebrating = true;
+                break;
+        }
     }
 
     Idle() {
