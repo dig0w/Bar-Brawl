@@ -9,11 +9,26 @@ export class Controller {
 
     #keys = {};
     #gamepadIndex = -1;
-    #jumpReleased = true;
-    #punchReleased = true;
-    #pauseReleased = true;
 
-    #inputs = { "MoveLeft": false, "MoveRight": false, "Jump": false, "Punch": false, "Block": false, "Pause": false };
+    #inputs = {
+        "MoveLeft":     { pressed: false, released: true, flag: 1, action: null },
+        "MoveRight":    { pressed: false, released: true, flag: 2, action: null },
+        "Jump":         { pressed: false, released: true, flag: 4, action: () => this.#pawn.Jump() },
+        "Punch":        { pressed: false, released: true, flag: 8, action: () => this.#pawn.Punch() },
+        "Block":        { pressed: false, released: true, flag: 16, action: null },
+        "Pause":        { pressed: false, released: true, flag: -1, action: null }
+    };
+
+    static maxInputsSequence = 10;
+    #sequence = [];
+    #sequenceCombos = [
+        { sequence: ["Jump", "Jump", "MoveLeft", "MoveLeft", "MoveRight", "MoveRight"], action: () => {
+            if (this.#pawn.bodyImg != Fighter.bodyImg2) {
+                this.#pawn.ChangeBodyImg(Fighter.bodyImg2);
+                this.#engine.PlaySound(0, 2, 1.5);
+            }
+        } }
+    ];
 
     static delayFrames = 3;
     #inputQueue = new Map();
@@ -55,20 +70,20 @@ export class Controller {
 
         const leftStickX = axes[0];
 
-        this.#inputs.MoveLeft ||= (leftStickX < -deadzone || buttons[14]?.pressed);
-        this.#inputs.MoveRight ||= (leftStickX > deadzone || buttons[15]?.pressed);
+        this.#inputs.MoveLeft.pressed ||= (leftStickX < -deadzone || buttons[14]?.pressed);
+        this.#inputs.MoveRight.pressed ||= (leftStickX > deadzone || buttons[15]?.pressed);
 
         // Jump: Up on D-Pad/Stick OR the Bottom Button (A/X)
-        this.#inputs.Jump ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
+        this.#inputs.Jump.pressed ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
 
         // Punch: West Button (X on Xbox, Square on PS)
-        this.#inputs.Punch ||= buttons[2].pressed;
+        this.#inputs.Punch.pressed ||= buttons[2].pressed;
 
         // Block: Shoulders (L1/R1) or Triggers
-        this.#inputs.Block ||= (buttons[4].pressed || buttons[5].pressed || buttons[6].pressed || buttons[7].pressed);
+        this.#inputs.Block.pressed ||= (buttons[4].pressed || buttons[5].pressed || buttons[6].pressed || buttons[7].pressed);
 
         // Pause: Start button
-        this.#inputs.Pause ||= buttons[9].pressed;
+        this.#inputs.Pause.pressed ||= buttons[9].pressed;
     }
 
     ReadInputs() {
@@ -76,49 +91,51 @@ export class Controller {
 
         switch (this.#variant) {
             case 0:
-                this.#inputs.MoveLeft = this.#keys["KeyA"];
-                this.#inputs.MoveRight = this.#keys["KeyD"];
-                this.#inputs.Jump = this.#keys["KeyW"];
-                this.#inputs.Punch = this.#keys["KeyR"];
-                this.#inputs.Block = this.#keys["KeyT"];
+                this.#inputs.MoveLeft.pressed = this.#keys["KeyA"];
+                this.#inputs.MoveRight.pressed = this.#keys["KeyD"];
+                this.#inputs.Jump.pressed = this.#keys["KeyW"];
+                this.#inputs.Punch.pressed = this.#keys["KeyR"];
+                this.#inputs.Block.pressed = this.#keys["KeyT"];
                 break;
             case 1:
-                this.#inputs.MoveLeft = this.#keys["ArrowLeft"];
-                this.#inputs.MoveRight = this.#keys["ArrowRight"];
-                this.#inputs.Jump = this.#keys["ArrowUp"];
-                this.#inputs.Punch = this.#keys["KeyK"];
-                this.#inputs.Block = this.#keys["KeyL"];
+                this.#inputs.MoveLeft.pressed = this.#keys["ArrowLeft"];
+                this.#inputs.MoveRight.pressed = this.#keys["ArrowRight"];
+                this.#inputs.Jump.pressed = this.#keys["ArrowUp"];
+                this.#inputs.Punch.pressed = this.#keys["KeyK"];
+                this.#inputs.Block.pressed = this.#keys["KeyL"];
                 break;
             case 2:
-                this.#inputs.MoveLeft = this.#keys["KeyA"] || this.#keys["ArrowLeft"];
-                this.#inputs.MoveRight = this.#keys["KeyD"] || this.#keys["ArrowRight"];
-                this.#inputs.Jump = this.#keys["KeyW"] || this.#keys["ArrowUp"];
-                this.#inputs.Punch = this.#keys["KeyR"] || this.#keys["KeyK"];
-                this.#inputs.Block = this.#keys["KeyT"] || this.#keys["KeyL"];
+                this.#inputs.MoveLeft.pressed = this.#keys["KeyA"] || this.#keys["ArrowLeft"];
+                this.#inputs.MoveRight.pressed = this.#keys["KeyD"] || this.#keys["ArrowRight"];
+                this.#inputs.Jump.pressed = this.#keys["KeyW"] || this.#keys["ArrowUp"];
+                this.#inputs.Punch.pressed = this.#keys["KeyR"] || this.#keys["KeyK"];
+                this.#inputs.Block.pressed = this.#keys["KeyT"] || this.#keys["KeyL"];
                 break;
         }
 
-        this.#inputs.Pause = this.#keys["Escape"];
+        this.#inputs.Pause.pressed = this.#keys["Escape"];
         this.#pollGamepad();
 
-        if (this.#inputs.Pause && this.#pauseReleased) {
-            this.#pauseReleased = false;
+        if (this.#inputs.Pause.pressed && this.#inputs.Pause.released) {
+            this.#inputs.Pause.released = false;
             if (!(this.#engine.gameMode === "VERSUS_LOCAL" && this.#variant == 1)) { // Avoids both controllers calling
                 if (this.#engine.gamePaused) this.#engine.Resume();
                 else this.#engine.Pause();
             }
-        } else if (!this.#inputs.Pause) {
-            this.#pauseReleased = true;
+        } else if (!this.#inputs.Pause.pressed) {
+            this.#inputs.Pause.released = true;
         }
     }
 
     GetInputMask() {
         let mask = 0;
-        if (this.#inputs.MoveLeft) mask |= 1;
-        if (this.#inputs.MoveRight) mask |= 2;
-        if (this.#inputs.Jump) mask |= 4;
-        if (this.#inputs.Punch) mask |= 8;
-        if (this.#inputs.Block) mask |= 16;
+
+        for (const [name, input] of Object.entries(this.#inputs)) {
+            if (input.flag <= 0) continue;
+
+            if (input.pressed) mask |= input.flag;
+        }
+
         return mask;
     }
 
@@ -128,23 +145,42 @@ export class Controller {
         if ((mask & 2) !== 0) moveDir += 1;
         this.#pawn.moveInput = moveDir;
 
-        const isJumping = (mask & 4) !== 0;
-        if (isJumping && this.#jumpReleased) {
-            this.#jumpReleased = false;
-            this.#pawn.Jump();
-        } else if (!isJumping) {
-            this.#jumpReleased = true;
-        }
+        let sequenceUpdated = false;
 
-        const isPunching = (mask & 8) !== 0;
-        if (isPunching && this.#punchReleased) {
-            this.#punchReleased = false;
-            this.#pawn.Punch();
-        } else if (!isPunching) {
-            this.#punchReleased = true;
+        for (const [name, input] of Object.entries(this.#inputs)) {
+            if (input.flag <= 0) continue;
+
+            const isActive = (mask & input.flag) !== 0;
+
+            if (isActive && input.released) {
+                input.released = false;
+                this.#pushToSequence(name);
+                sequenceUpdated = true;
+
+                if (input.action) input.action();
+            } else if (!isActive) {
+                input.released = true;
+            }
         }
 
         this.#pawn.SetBlocking((mask & 16) !== 0);
+
+        if (sequenceUpdated) {
+            for (const combo of this.#sequenceCombos) {
+                const len = combo.sequence.length;
+                if (this.#sequence.length < len) continue;
+
+                const recentInputs = this.#sequence.slice(-len);
+                const matches = combo.sequence.every((input, index) => input === recentInputs[index]);
+
+                if (matches) {
+                    if (combo.action) combo.action();
+
+                    this.ClearSequence();
+                    break;
+                }
+            }
+        }
     }
 
     // Queue Management
@@ -152,6 +188,16 @@ export class Controller {
     GetInputForFrame(frame) { return this.#inputQueue.get(frame); }
     ClearInput(frame) { this.#inputQueue.delete(frame); }
     ClearAllInputs() { this.#inputQueue.clear(); }
+
+    // Sequence Management
+    ClearSequence() { this.#sequence = []; }
+
+    #pushToSequence(inputName) {
+        this.#sequence.push(inputName);
+        if (this.#sequence.length > Controller.maxInputsSequence) {
+            this.#sequence.shift();
+        }
+    }
 
     // Instant execution for OFFLINE modes
     Tick(deltaTime) {
@@ -168,10 +214,12 @@ export class Controller {
 
     Reset() {
         this.#keys = {};
-        this.#jumpReleased = true;
-        this.#punchReleased = true;
-        this.#pauseReleased = true;
 
+        for (const [name, input] of Object.entries(this.#inputs)) {
+            input.released = true;
+        }
+
+        this.#sequence = [];
         this.#pawn.moveInput = 0;
     }
 }

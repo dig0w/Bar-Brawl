@@ -17,6 +17,7 @@ export class Fighter {
 
     static bodyImg0 = Object.assign(new Image(), { src: "assets/bald_sheet.png" });
     static bodyImg1 = Object.assign(new Image(), { src: "assets/biker_sheet.png" });
+    static bodyImg2 = Object.assign(new Image(), { src: "assets/spidey_sheet.png" });
     #bodyImg = null;
     static defaultBodyAnimTimer = 20 / 60;
     static maxBodyAnimState = 2;
@@ -120,14 +121,14 @@ export class Fighter {
 
         switch (variant) {
             case 0:
-                this.#bodyImg = Fighter.bodyImg0;
+                this.ChangeBodyImg(Fighter.bodyImg0);
                 this.#loc.x = 10;
 
                 this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart0;
                 this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd0;
                 break;
             case 1:
-                this.#bodyImg = Fighter.bodyImg1;
+                this.ChangeBodyImg(Fighter.bodyImg1);
                 this.#bodyAnimState++;
 
                 this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
@@ -151,6 +152,9 @@ export class Fighter {
 
     get hitboxes() { return this.#hitboxes; }
     get health() { return this.#health; }
+
+    get bodyImg() { return this.#bodyImg; }
+    ChangeBodyImg(bodyImg) { if (bodyImg) this.#bodyImg = bodyImg; }
 
     Begin() {
         this.#groundY = this.#engine.groundY - this.#size.h;
@@ -736,10 +740,10 @@ export class Fighter {
         this.#idleTimer = Fighter.defaultIdleTimer;
     }
 
-    Reset() {
+    Reset(resetSkin = false) {
         if (this.#variant == 0) this.#loc.x = 10;
         else this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
-        
+
         this.#loc.y = this.#groundY;
 
         this.#vel.x = 0;
@@ -760,6 +764,17 @@ export class Fighter {
         this.#punchedCooldown = 0;
         this.#dieAnimState = -1;
         this.#bloodAnimState = -1;
+
+        if (resetSkin) {
+            switch (this.#variant) {
+                case 0:
+                    this.ChangeBodyImg(Fighter.bodyImg0);
+                    break;
+                case 1:
+                    this.ChangeBodyImg(Fighter.bodyImg1);
+                    break;
+            }
+        }
     }
 
 

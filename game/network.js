@@ -191,10 +191,12 @@ export class NetworkManager {
 
         p.on("close", () => {
             this.Disconnect();
+            if (this.#engine.gameState !== "MENU") this.#engine.mainMenu.StartGame(-1, 0);
         });
 
         p.on("error", (a) => {
             this.Disconnect();
+            if (this.#engine.gameState !== "MENU") this.#engine.mainMenu.StartGame(-1, 0);
         });
 
         this.#peer = p;
@@ -253,8 +255,6 @@ export class NetworkManager {
 
         this.#closeSignaling();
         this.#sessionCode = null;
-        if (this.#engine.musicSfx) this.#engine.musicSfx.StopSound(1000);
-        this.#engine.SetGameState(0, 0);
     }
 
 

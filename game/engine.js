@@ -37,8 +37,8 @@ export class FighterEngine {
     #rounds = 0;
     #scoreF0 = 0;
     #scoreF1 = 0;
-    static maxRoundTime = 3;
-    #roundTime = 1;
+    static maxRoundTime = 99;
+    #roundTime = 0;
 
     static IntroSheet = Object.assign(new Image(), { src: "assets/intro.png" });
                         //   0     1     2     3     4           5              6     7     8     9    10          11          12    13    14    15          16    17
@@ -124,8 +124,8 @@ export class FighterEngine {
         /*  4 */ { name: "hit_2", bus: 0 },
         /*  5 */ { name: "groan_1", bus: 0 },
         /*  6 */ { name: "groan_2", bus: 0 },
-        /*  7 */ { name: "jump_1", bus: 0 },
-        /*  8 */ { name: "jump_2", bus: 0 },
+        /*  7 */ { name: "huh_1", bus: 0 },
+        /*  8 */ { name: "huh_2", bus: 0 },
         /*  9 */ { name: "step_1", bus: 0 },
         /* 10 */ { name: "step_2", bus: 0 },
         /* 11 */ { name: "idle", bus: 0 },
@@ -680,52 +680,19 @@ export class FighterEngine {
     SetGameState(state, mode = -1) {
         // States = MENU INTRO PRE_ROUND FIGHTING POS_ROUND GAME_OVER CREDITS
         // Modes = CAREER VERSUS_LOCAL VERSUS_HOST VERSUS_CLIENT
-        if (mode >= 0) {
-            this.#ctrl0 = null;
-            this.#ctrl1 = null;
-
-            switch (mode) {
-                case 0:
-                case "MAIN":
-                    this.#gameMode = "MAIN";
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
-                    this.#ctrl1 = new AIController(this, this.#fighter1, .8);
-                    break;
-                case 1:
-                case "VERSUS_LOCAL":
-                    this.#gameMode = "VERSUS_LOCAL";
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 0, 0);
-                    this.#ctrl1 = new Controller(this, this.#fighter1, 1, 1);
-                    break;
-                case 2:
-                case "VERSUS_HOST":
-                    this.#gameMode = "VERSUS_HOST";
-                    this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
-                    this.#ctrl1 = new Controller(this, this.#fighter1, 0, 1, true);
-                    break;
-                case 3:
-                case "VERSUS_CLIENT":
-                    this.#gameMode = "VERSUS_CLIENT";
-                    this.#ctrl0 = new Controller(this, this.#fighter1, 2, 0);
-                    this.#ctrl1 = new Controller(this, this.#fighter0, 0, 1, true);
-                    break;
-            }
-
-            this.#ctrl0?.Begin();
-            this.#ctrl1?.Begin();
-        }
-
         switch (state) {
             case 0:
             case "MENU":
                 this.#gameState = "MENU";
                 this.#gamePaused = false;
 
+                mode = 0;
+
                 if (this.#network.hasConnection) this.Disconnect();
 
                 this.#mainMenu.Reset();
-                this.#fighter0.Reset();
-                this.#fighter1.Reset();
+                this.#fighter0.Reset(true);
+                this.#fighter1.Reset(true);
 
                 this.#rounds = 0;
                 this.#scoreF0 = 0;
@@ -792,6 +759,41 @@ export class FighterEngine {
                 this.#uiCreditsTimer = FighterEngine.defaultUiCreditsTimer;
                 this.#uiCreditsLocY = this.#canvas.height;
                 break;
+        }
+
+        if (mode >= 0) {
+            this.#ctrl0 = null;
+            this.#ctrl1 = null;
+
+            switch (mode) {
+                case 0:
+                case "MAIN":
+                    this.#gameMode = "MAIN";
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
+                    this.#ctrl1 = new AIController(this, this.#fighter1, .8);
+                    break;
+                case 1:
+                case "VERSUS_LOCAL":
+                    this.#gameMode = "VERSUS_LOCAL";
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 0, 0);
+                    this.#ctrl1 = new Controller(this, this.#fighter1, 1, 1);
+                    break;
+                case 2:
+                case "VERSUS_HOST":
+                    this.#gameMode = "VERSUS_HOST";
+                    this.#ctrl0 = new Controller(this, this.#fighter0, 2, 0);
+                    this.#ctrl1 = new Controller(this, this.#fighter1, 0, 1, true);
+                    break;
+                case 3:
+                case "VERSUS_CLIENT":
+                    this.#gameMode = "VERSUS_CLIENT";
+                    this.#ctrl0 = new Controller(this, this.#fighter1, 2, 0);
+                    this.#ctrl1 = new Controller(this, this.#fighter0, 0, 1, true);
+                    break;
+            }
+
+            this.#ctrl0?.Begin();
+            this.#ctrl1?.Begin();
         }
     }
 
@@ -884,7 +886,7 @@ export class FighterEngine {
         this.Fade("#000", 500);
         await this.Wait(1200);
         if (this.#gameState !== "POS_ROUND") {
-            this.Fade("#000", 0, -1);
+            this.Fade("#000", 500, -1);
             return;
         }
         this.SetGameState(2);
@@ -924,7 +926,7 @@ export class FighterEngine {
         this.Fade("#000", 500);
         await this.Wait(1200);
         if (this.#gameState !== "GAME_OVER") {
-            this.Fade("#000", 0, -1);
+            this.Fade("#000", 500, -1);
             return;
         }
         if (this.#gameMode !== "MAIN") this.SetGameState(0);

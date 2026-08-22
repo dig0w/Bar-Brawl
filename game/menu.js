@@ -377,7 +377,7 @@ export class Menu {
         this.#engine.Fade("#000", 500);
         await this.#engine.Wait(1200);
         if (this.#canSelect) {
-            this.#engine.Fade("#000", 0, -1);
+            this.#engine.Fade("#000", 500, -1);
             return;
         }
         this.#engine.SetGameState(state, mode);
