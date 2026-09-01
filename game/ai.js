@@ -6,12 +6,12 @@ export class AIController {
     #pawn = null;
     #opponent = null;
 
-    static punchRange = 20;
+    static attackRange = 20;
     static wallMargin = 15;
 
     #lastDistance;
 
-    #opponentWasPunching = false;
+    #opponentWasAttacking = false;
     #reactionTimer = 0;
     #blockDuration = 0;
 
@@ -43,6 +43,7 @@ export class AIController {
 
         let move = 0;
         let blocking = false;
+        let crouching = false;
 
         const myX = this.#pawn.loc.x;
         const myRight = myX + this.#pawn.size.w;
@@ -51,47 +52,60 @@ export class AIController {
         const distanceDiff = distance - this.#lastDistance;
 
         const worldWidth = this.#engine.worldWidth;
-        const nearLeftWall  = myX < AIController.wallMargin;
+        const nearLeftWall = myX < AIController.wallMargin;
         const nearRightWall = myRight > worldWidth - AIController.wallMargin;
         const wallEscapeDir = nearLeftWall ? 1 : nearRightWall ? -1 : 0;
 
         const isClosingIn = distanceDiff < -.1 && ((oppX < myX && this.#opponent.vel.x > 0.1) || (oppX > myX && this.#opponent.vel.x < -0.1));
-        const isInRange = distance < AIController.punchRange;
+        const isInAttackRange = distance < AIController.attackRange;
 
-        if (this.#opponent.isPunching && !this.#opponentWasPunching) {
+        const isOpponentAttacking = this.#opponent.isPunching || this.#opponent.isKicking;
+
+        if (isOpponentAttacking && !this.#opponentWasAttacking) {
             this.#reactionTimer = this.#reactionDelay;
             this.#blockDuration = Fighter.defaultPunchAnimTimer * 2;
         }
-        this.#opponentWasPunching = this.#opponent.isPunching;
+        this.#opponentWasAttacking = isOpponentAttacking;
 
         if (this.#reactionTimer > 0) this.#reactionTimer -= deltaTime;
         if (this.#blockDuration > 0 && this.#reactionTimer <= 0) this.#blockDuration -= deltaTime;
 
-        const shouldBait = isClosingIn && !this.#opponent.isPunching && distance < AIController.punchRange + 20 && (this.#difficulty === 1 || Math.random() < this.#baitChance);
+        const shouldBait = isClosingIn && !isOpponentAttacking && distance < AIController.attackRange + 20 && (this.#difficulty === 1 || Math.random() < this.#baitChance);
 
         if (wallEscapeDir !== 0) {
             // Cornered
             move = wallEscapeDir;
-            blocking = false;
         } else if (this.#blockDuration > 0 && this.#reactionTimer <= 0) {
             // Defending
-            blocking = isInRange && (this.#difficulty === 1 || Math.random() < this.#blockChance);
-            move = 0;
+            blocking = isInAttackRange && (this.#difficulty === 1 || Math.random() < this.#blockChance);
+            if (blocking && this.#opponent.isCrouching) crouching = true; // Crouch block to defend sweeps
         } else if (shouldBait) {
             // Baiting
             move = (oppX < myX) ? 1 : -1;
-            blocking = false;
         } else if (this.#difficulty === 1 || Math.random() >= this.#missChance) {
             // Attacking
             move = (oppX < myX) ? -1 : 1;
 
-            if (isInRange) this.#pawn.Punch();
+            if (isInAttackRange) {
+                // Decide attack type
+                const doSweep = isInAttackRange && Math.random() > 0.6;
+
+                if (doSweep) {
+                    crouching = true;
+                    this.#pawn.Kick();
+                } else if (isInAttackRange && Math.random() > 0.5) {
+                    this.#pawn.Punch();
+                } else {
+                    this.#pawn.Kick();
+                }
+            }
         }
 
         const heightDiff = (this.#opponent.loc.y + this.#opponent.size.h * 0.2) - (this.#pawn.loc.y);
-        if (isInRange && heightDiff < -10 && this.#pawn.isGrounded) this.#pawn.Jump();
+        if (isInAttackRange && heightDiff < -10 && this.#pawn.isGrounded) this.#pawn.Jump();
 
         this.#pawn.moveInput = move;
+        this.#pawn.SetCrouching(crouching);
         this.#pawn.SetBlocking(blocking);
         this.#lastDistance = distance;
     }

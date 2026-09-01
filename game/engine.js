@@ -336,11 +336,11 @@ export class FighterEngine {
             this.#fighter1.ResolvePendingDamage();
 
             if (this.gameState === "FIGHTING") {
-                if (this.#fighter0.health <= 0 && this.#fighter1.health <= 0) {
+                if (this.#fighter0.zeroHealth && this.#fighter1.zeroHealth) {
                     this.RoundOver(null, true);
-                } else if (this.#fighter0.health <= 0) {
+                } else if (this.#fighter0.zeroHealth) {
                     this.RoundOver(this.#fighter0);
-                } else if (this.#fighter1.health <= 0) {
+                } else if (this.#fighter1.zeroHealth) {
                     this.RoundOver(this.#fighter1);
                 }
             }

@@ -2,7 +2,6 @@ import { FighterEngine } from "./engine.js";
 import { Circle, Intersects, Rect } from "./hitboxes.js";
 
 export class Fighter {
-    static showHitboxes = false;
     #engine = null;
     #variant = -1;
 
@@ -30,11 +29,14 @@ export class Fighter {
     #walkingAnimState = 0;
     #walkingAnimTimer = Fighter.defaultWalkingAnimTimer;
 
+    #isCrouching = false;
+    static defaultCrouchCooldown = 18 / 60;
+    #crouchCooldown = 0
+
     static defaultPunchAnimTimer = 6 / 60;
     static maxPunchAnimState = 3;
     #punchAnimState = -1;
     #punchAnimTimer = 0;
-
     #punchHasHit = false;
     #punchTimer = 0;
     #startPunchTrace = Fighter.defaultPunchAnimTimer / 2;
@@ -42,14 +44,28 @@ export class Fighter {
     static defaultPunchCooldown = 18 / 60;
     #punchCooldown = 0;
 
+    static defaultKickAnimTimer = 8 / 60;
+    static maxKickAnimState = 3;
+    #kickAnimState = -1;
+    #kickAnimTimer = 0;
+    #kickHasHit = false;
+    #kickTimer = 0;
+    #startKickTrace = Fighter.defaultKickAnimTimer / 2;
+    #endKickTrace = Fighter.defaultKickAnimTimer + (Fighter.defaultKickAnimTimer / 2);
+    static defaultKickCooldown = 38 / 60;
+    #kickCooldown = 0;
+
     #isBlocking = false;
+    static defaultBlockCooldown = 18 / 60;
+    #blockCooldown = 0;
 
-    #celebrating = false;
+    #isCelebrating = false;
+    #isSwept = false;
 
-    static defaultPunchedAnimTimer = 14 / 60;
-    #punchedAnimTimer = 0;
-    static defaultPunchedCooldown = 22 / 60;
-    #punchedCooldown = 0;
+    static defaultHurtAnimTimer = 14 / 60;
+    #hurtAnimTimer = 0;
+    static defaultHurtCooldown = 22 / 60;
+    #hurtCooldown = 0;
 
     static defaultDieAnimTimer = 10 / 60;
     static maxDieAnimState = 3;
@@ -68,26 +84,92 @@ export class Fighter {
     static shadowOpacity = 0.2;
     static shadowJump = 25;
 
-    static hitboxesOffset = [
-        { x: 15, y: 12 },
-        { x: 10, y: 18 },
-        { x: 9, y: 18 },
-        { x: 16, y: 18 },
-        { x: 12, y: 26 },
-        { x: 15, y: 26 }
+    static hurtboxValues = [
+        { size: { w: 6, h:  6 }, damage: 7.5 }, { size: { w: 8, h: 12 }, damage: 5.0 },  //   Head,     Chest
+        { size: { w: 4, h: 10 }, damage: 3.5 }, { size: { w: 4, h: 10 }, damage: 3.5 },  // Arm Right, Arm Left
+        { size: { w: 4, h: 12 }, damage: 2.5 }, { size: { w: 4, h: 12 }, damage: 2.5 }   // Leg Right, Leg Left
     ];
+    static hurtboxOffsets = {
+        idle: [
+            { loc: { x: 16, y: 12 }, rot: 0   }, { loc: { x: 10, y: 16 }, rot:  0   },   //   Head,     Chest
+            { loc: { x:  7, y: 17 }, rot: 0   }, { loc: { x: 17, y: 17 }, rot:  0   },   // Arm Right, Arm Left
+            { loc: { x:  7, y: 26 }, rot: 0.7 }, { loc: { x: 15, y: 26 }, rot: -0.5 }    // Leg Right, Leg Left
+        ],
+        crouch: [
+            { loc: { x: 17, y: 18 }, rot: 0   }, { loc: { x: 11, y: 22 }, rot:  0   },   //   Head,     Chest
+            { loc: { x:  6, y: 22 }, rot: 0   }, { loc: { x: 18, y: 24 }, rot:  0   },   // Arm Right, Arm Left
+            { loc: { x:  7, y: 28 }, rot: 0.9 }, { loc: { x: 15, y: 26 }, rot: -0.4 }    // Leg Right, Leg Left
+        ],
+        crouch_punch: [
+            { loc: { x: 17, y: 18 }, rot: 0   }, { loc: { x: 11, y: 22 }, rot:  0   },   //   Head,     Chest
+            { loc: { x:  6, y: 22 }, rot: 10  }, { loc: { x: 24, y: 20 }, rot: 30   },   // Arm Right, Arm Left
+            { loc: { x:  7, y: 28 }, rot: 0.9 }, { loc: { x: 15, y: 26 }, rot: -0.4 }    // Leg Right, Leg Left
+        ],
+        crouch_kick: [
+            { loc: { x: 12, y: 18 }, rot: 0   }, { loc: { x:  8, y: 20 }, rot: -0.2 },   //   Head,     Chest
+            { loc: { x:  4, y: 21 }, rot: 10  }, { loc: { x: 20, y: 19 }, rot:  1.9 },   // Arm Right, Arm Left
+            { loc: { x:  7, y: 28 }, rot: 0.9 }, { loc: { x: 19, y: 25 }, rot: -1.4 }    // Leg Right, Leg Left
+        ],
+        crouch_block: [
+            { loc: { x: 17, y: 18 }, rot: 0   }, { loc: { x: 11, y: 22 }, rot:  0   },   //   Head,     Chest
+            { loc: { x: 14, y: 22 }, rot: 1   }, { loc: { x: 22, y: 20 }, rot: 60   },  // Arm Right, Arm Left
+            { loc: { x:  7, y: 28 }, rot: 0.9 }, { loc: { x: 15, y: 26 }, rot: -0.4 }    // Leg Right, Leg Left
+        ],
+        jump: [
+            { loc: { x: 17, y:  8 }, rot: 0   }, { loc: { x: 11, y: 12 }, rot: 0 },      //   Head,     Chest
+            { loc: { x:  8, y: 13 }, rot: 0   }, { loc: { x: 18, y: 14 }, rot: 0 },      // Arm Right, Arm Left
+            { loc: { x: 10, y: 24 }, rot: 0.5 }, { loc: { x: 18, y: 24 }, rot: 0 }       // Leg Right, Leg Left
+        ],
+        jump_punch: [
+            { loc: { x: 17, y:  8 }, rot: 0   }, { loc: { x: 11, y: 12 }, rot:  0 },     //   Head,     Chest
+            { loc: { x:  6, y: 12 }, rot: 10  }, { loc: { x: 22, y: 10 }, rot: 30 },     // Arm Right, Arm Left
+            { loc: { x: 10, y: 24 }, rot: 0.5 }, { loc: { x: 18, y: 24 }, rot:  0 }      // Leg Right, Leg Left
+        ],
+        jump_block: [
+            { loc: { x: 17, y:  8 }, rot: 0   }, { loc: { x: 11, y: 12 }, rot:  0 },     //   Head,     Chest
+            { loc: { x: 15, y: 10 }, rot: 1   }, { loc: { x: 23, y: 10 }, rot: 60 },     // Arm Right, Arm Left
+            { loc: { x: 10, y: 24 }, rot: 0.5 }, { loc: { x: 18, y: 24 }, rot:  0 }      // Leg Right, Leg Left
+        ],
+        jump_kick: [
+            { loc: { x: 12, y:  8 }, rot:  0   }, { loc: { x:  8, y: 12 }, rot: -0.2 },  //   Head,     Chest
+            { loc: { x:  4, y: 13 }, rot: 10   }, { loc: { x: 20, y: 11 }, rot:  1.9 },  // Arm Right, Arm Left
+            { loc: { x:  9, y: 23 }, rot:  0.2 }, { loc: { x: 21, y: 18 }, rot: -1.4 }   // Leg Right, Leg Left
+        ],
+        punch: [
+            { loc: { x: 16, y: 12 }, rot:  0   }, { loc: { x: 10, y: 16 }, rot:  0   },  //   Head,     Chest
+            { loc: { x:  6, y: 16 }, rot: 10   }, { loc: { x: 22, y: 14 }, rot: 30   },  // Arm Right, Arm Left
+            { loc: { x:  7, y: 26 }, rot:  0.7 }, { loc: { x: 15, y: 26 }, rot: -0.5 }   // Leg Right, Leg Left
+        ],
+        kick: [
+            { loc: { x: 10, y: 11 }, rot:  0   }, { loc: { x:  6, y: 15 }, rot: -0.2 },  //   Head,     Chest
+            { loc: { x:  2, y: 16 }, rot: 10   }, { loc: { x: 18, y: 14 }, rot:  1.9 },  // Arm Right, Arm Left
+            { loc: { x:  7, y: 26 }, rot:  0.2 }, { loc: { x: 19, y: 22 }, rot: -1.4 }   // Leg Right, Leg Left
+        ],
+        block: [
+            { loc: { x: 16, y: 12 }, rot:  0   }, { loc: { x: 10, y: 16 }, rot:  0   },  //   Head,     Chest
+            { loc: { x: 14, y: 14 }, rot:  1   }, { loc: { x: 22, y: 14 }, rot: 60   },  // Arm Right, Arm Left
+            { loc: { x:  7, y: 26 }, rot:  0.7 }, { loc: { x: 15, y: 26 }, rot: -0.5 }   // Leg Right, Leg Left
+        ],
+        die: [
+            { loc: { x:  6, y: 32 }, rot:  0    }, { loc: { x: 12, y: 27 }, rot: 1.57 },  //   Head,     Chest
+            { loc: { x: 14, y: 32 }, rot:  1.57 }, { loc: { x: 14, y: 32 }, rot: 1.57 },  // Arm Right, Arm Left
+            { loc: { x: 24, y: 28 }, rot: -1.4  }, { loc: { x: 24, y: 26 }, rot: -1.4 }   // Leg Right, Leg Left
+        ]
+    };
+    #hurtboxes = [];
+    static hitboxValues = [
+        { w: 4, h: 4 }, // Punch
+        { w: 4, h: 4 }  // Kick
+    ];
+    static hitboxOffsets = [
+        { start: { x: 21, y: 22 }, end: { x: 29, y: 19 } }, // Punch
+        { start: { x: 16, y: 30 }, end: { x: 29, y: 27 } }  // Kick
+    ]
+    static crouchHitboxOffset = { x: 0, y: 5 };
     #hitboxes = [];
-    static fistHitBoxOffsetStart0 = { x: 21, y: 23 };
-    static fistHitBoxOffsetEnd0 = { x: 29, y: 20 };
-    static fistHitBoxOffsetStart1 = { x: 22, y: 21 };
-    static fistHitBoxOffsetEnd1 = { x: 29, y: 18 };
-    #fistHitBoxOffsetStart = null;
-    #fistHitBoxOffsetEnd = null;
-    #fistHitBox = null;
     #pendingHit = null;
+    static showHitboxes = false;
 
-    static hitboxesDamage = [7.5, 5, 3.5, 3.5, 2.5, 2.5];
-    // static hitboxesDamage = [2000, 2000, 2000, 2000, 2000, 2000];
     static maxHealth = 100;
     #health = Fighter.maxHealth;
     #isDead = false;
@@ -110,8 +192,6 @@ export class Fighter {
     #idleTimer = 0;
     #idleSfx = null;
 
-    #networkHitReport = 0;
-
     constructor(engine = null, variant = 0) {
         if (!(engine instanceof FighterEngine))
             throw new Error(`${this.constructor.name} requires a ${FighterEngine.name} instance.`);
@@ -123,9 +203,6 @@ export class Fighter {
             case 0:
                 this.ChangeBodyImg(Fighter.bodyImg0);
                 this.#loc.x = 10;
-
-                this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart0;
-                this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd0;
                 break;
             case 1:
                 this.ChangeBodyImg(Fighter.bodyImg1);
@@ -134,9 +211,6 @@ export class Fighter {
                 this.#loc.x = this.#engine.canvasSize.w - this.#size.w - 1;
 
                 this.#facingRight = false;
-
-                this.#fistHitBoxOffsetStart = Fighter.fistHitBoxOffsetStart1;
-                this.#fistHitBoxOffsetEnd = Fighter.fistHitBoxOffsetEnd1;
                 break;
         }
     }
@@ -146,11 +220,14 @@ export class Fighter {
     get size() { return this.#size; }
 
     get isGrounded() { return this.#loc.y >= this.#groundY; }
+    get isCrouching() { return this.#isCrouching; }
     get isPunching() { return this.#punchAnimState >= 0; }
+    get isKicking() { return this.#kickAnimState >= 0; }
     get isBlocking() { return this.#isBlocking; }
-    get isStunned() { return this.#punchedCooldown > 0; }
+    get isStunned() { return this.#hurtCooldown > 0 || this.#isSwept; }
+    get zeroHealth() { return this.#health <= 0; }
 
-    get hitboxes() { return this.#hitboxes; }
+    get hitboxes() { return this.#hurtboxes; }
     get health() { return this.#health; }
 
     get bodyImg() { return this.#bodyImg; }
@@ -160,15 +237,12 @@ export class Fighter {
         this.#groundY = this.#engine.groundY - this.#size.h;
         this.#loc.y = this.#groundY;
 
-        this.#hitboxes = [
-            new Circle(0, 0, 6),    // Head
-            new Rect(0, 0, 9, 9),   // Chest
-            new Rect(0, 0, 4, 10),  // Arm Left
-            new Rect(0, 0, 4, 10),  // Arm Right
-            new Rect(0, 0, 4, 12),  // Leg Left
-            new Rect(0, 0, 4, 12)   // Leg Right
-        ];
-        this.#fistHitBox = new Circle(0, 0, 4);
+        for (const hurtbox of Fighter.hurtboxValues) {
+            this.#hurtboxes.push(new Rect(0, 0, hurtbox.size.w, hurtbox.size.h));
+        }
+        this.#hurtboxes[0] = new Circle(0, 0, Fighter.hurtboxValues[0].size.w);
+        this.#hitboxes.push(new Circle(0, 0, Fighter.hitboxValues[0].w));
+        this.#hitboxes.push(new Rect(0, 0, Fighter.hitboxValues[1].w, Fighter.hitboxValues[1].h));
 
         this.#UpdateHitboxes();
     }
@@ -176,7 +250,7 @@ export class Fighter {
     Tick(deltaTime) {
         // Move
         const moveSpeed = 100;
-        if (!this.isPunching && !this.isBlocking) {
+        if (!this.isCrouching && !this.isPunching && !this.isKicking && !this.isBlocking && !this.isStunned) {
             this.#vel.x += this.moveInput * moveSpeed * deltaTime;
         }
 
@@ -248,8 +322,11 @@ export class Fighter {
             }
         }
 
+        // Crouch Cooldown
+        if (this.#crouchCooldown > 0) this.#crouchCooldown -= deltaTime;
+
         // Punch Animation
-        if (this.#punchAnimState >= 0) {
+        if (this.isPunching) {
             this.#punchAnimTimer -= deltaTime;
 
             if (this.#punchAnimTimer <= 0) {
@@ -267,24 +344,24 @@ export class Fighter {
                 if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
                     const percent = (this.#punchTimer - this.#startPunchTrace) / (this.#endPunchTrace - this.#startPunchTrace);
 
-                    const dx = this.#fistHitBoxOffsetEnd.x - this.#fistHitBoxOffsetStart.x;
-                    const dy = this.#fistHitBoxOffsetEnd.y - this.#fistHitBoxOffsetStart.y;
-                    let localX = this.#fistHitBoxOffsetStart.x + (dx * percent);
-                    let localY = this.#fistHitBoxOffsetStart.y + (dy * percent);
+                    const dx = Fighter.hitboxOffsets[0].end.x - Fighter.hitboxOffsets[0].start.x + (this.isCrouching ? Fighter.crouchHitboxOffset.x : 0);
+                    const dy = Fighter.hitboxOffsets[0].end.y - Fighter.hitboxOffsets[0].start.y + (this.isCrouching ? Fighter.crouchHitboxOffset.y : 0);
+                    let localX = Fighter.hitboxOffsets[0].start.x + (dx * percent);
+                    let localY = Fighter.hitboxOffsets[0].start.y + (dy * percent);
 
                     if (!this.#facingRight) localX = this.#size.w - localX;
 
-                    this.#fistHitBox.loc.x = (this.#loc.x + localX) | 0;
-                    this.#fistHitBox.loc.y = (this.#loc.y + localY) | 0;
+                    this.#hitboxes[0].loc.x = (this.#loc.x + localX) | 0;
+                    this.#hitboxes[0].loc.y = (this.#loc.y + localY) | 0;
 
                     for (let i = 0; i < opponent.hitboxes.length; i++) {
                         const hitbox = opponent.hitboxes[i];
-                        const { intersected, hitPoint } = Intersects(this.#fistHitBox, hitbox);
+                        const { intersected, hitPoint } = Intersects(this.#hitboxes[0], hitbox);
                         if (intersected) {
                             this.#punchHasHit = true;
                             this.#engine.PlaySound(3 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
 
-                            opponent.QueueDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0) }, Number(this.#vel.x.toFixed(2)));
+                            opponent.QueueDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0) }, Number(this.#vel.x.toFixed(2)), 0);
                             break;
                         }
                     }
@@ -295,16 +372,73 @@ export class Fighter {
                 this.#punchCooldown -= deltaTime;
         }
 
-        // Punched Animation
-        if (this.#punchedAnimTimer >= 0) this.#punchedAnimTimer -= deltaTime;
-        if (this.#punchedCooldown >= 0) this.#punchedCooldown -= deltaTime;
+        // Kick Animation
+        if (this.isKicking) {
+            this.#kickAnimTimer -= deltaTime;
+
+            if (this.#kickAnimTimer <= 0) {
+                this.#kickAnimState++;
+
+                if (this.#kickAnimState == Fighter.maxKickAnimState) {
+                    this.#kickAnimState = -1;
+                } else {
+                    this.#kickAnimTimer += Fighter.defaultKickAnimTimer;
+                }
+            }
+
+            if (!this.#kickHasHit) {
+                this.#kickTimer += deltaTime;
+                if (this.#kickTimer >= this.#startKickTrace && this.#kickTimer <= this.#endKickTrace) {
+                    const percent = (this.#kickTimer - this.#startKickTrace) / (this.#endKickTrace - this.#startKickTrace);
+
+                    const dx = Fighter.hitboxOffsets[1].end.x - Fighter.hitboxOffsets[1].start.x + (this.isCrouching ? Fighter.crouchHitboxOffset.x : 0);
+                    const dy = Fighter.hitboxOffsets[1].end.y - Fighter.hitboxOffsets[1].start.y + (this.isCrouching ? Fighter.crouchHitboxOffset.y : 0);
+                    let localX = Fighter.hitboxOffsets[1].start.x + (dx * percent);
+                    let localY = Fighter.hitboxOffsets[1].start.y + (dy * percent);
+
+                    if (!this.#facingRight) localX = this.#size.w - localX;
+
+                    this.#hitboxes[1].loc.x = (this.#loc.x + localX) | 0;
+                    this.#hitboxes[1].loc.y = (this.#loc.y + localY) | 0;
+
+                    for (let i = 0; i < opponent.hitboxes.length; i++) {
+                        const hitbox = opponent.hitboxes[i];
+                        const { intersected, hitPoint } = Intersects(this.#hitboxes[1], hitbox);
+                        if (intersected) {
+                            this.#kickHasHit = true;
+                            this.#engine.PlaySound(3 + Math.round(Math.random()), 0.9 + Math.random() * 0.2);
+
+                            opponent.QueueDamage(i, { x: (hitPoint.x | 0), y: (hitPoint.y | 0) }, Number(this.#vel.x.toFixed(2)), this.isCrouching ? 2 : 1);
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            if (this.#kickCooldown > 0)
+                this.#kickCooldown -= deltaTime;
+        }
+
+        // Block Cooldown
+        if (this.#blockCooldown > 0) this.#blockCooldown -= deltaTime;
+
+        // Hurt Animation
+        if (this.#hurtAnimTimer >= 0) this.#hurtAnimTimer -= deltaTime;
+        if (this.#hurtCooldown >= 0) this.#hurtCooldown -= deltaTime;
 
         // Die Animation
-        if (this.#dieAnimTimer >= 0 && this.#health <= 0) {
+        if (this.#dieAnimTimer >= 0 && (this.zeroHealth || this.#isSwept)) {
             this.#dieAnimTimer -= deltaTime;
-            if (this.#dieAnimTimer <= 0 && this.#dieAnimState != Fighter.maxDieAnimState - 1) {
-                this.#dieAnimState = (this.#dieAnimState + 1) % Fighter.maxDieAnimState;
-                this.#dieAnimTimer += Fighter.defaultDieAnimTimer;
+
+            if (this.#dieAnimTimer <= 0) {
+                if (this.#dieAnimState != Fighter.maxDieAnimState - 1) {
+                    this.#dieAnimState++;
+
+                    this.#dieAnimTimer = (this.#isSwept && this.#dieAnimState === Fighter.maxDieAnimState - 1) ? 0.5 : Fighter.defaultDieAnimTimer;
+                } else if (this.#isSwept) {
+                    this.#isSwept = false;
+                    this.#dieAnimState = 0;
+                }
             }
         }
 
@@ -326,7 +460,7 @@ export class Fighter {
         }
 
         // Land Sound
-        if (this.#hasJumped && this.isGrounded && !this.#celebrating) {
+        if (this.#hasJumped && this.isGrounded && !this.#isCelebrating) {
             this.#engine.PlaySound(9, 0.7 + Math.random() * 0.2, 0.8);
             this.#hasJumped = false;
         }
@@ -391,7 +525,7 @@ export class Fighter {
         }
 
         let frameCoords = { x: 0, y: 0 };
-        if (this.#health <= 0) {
+        if (this.zeroHealth || this.#isSwept) {
             // Die Animations
             switch (this.#dieAnimState) {
                 case 0:
@@ -404,29 +538,45 @@ export class Fighter {
                     frameCoords = { x: this.#size.w * 2, y: this.#size.h * 4 };
                     break;
             }
-        } else if (this.#punchedAnimTimer > 0) {
-            // Punched Animation
+        } else if (this.#hurtAnimTimer > 0) {
+            // Hurt Animation
             frameCoords = { x: 0, y: this.#size.h * 4 };
-        } else if (this.#punchAnimState > 0 && this.isGrounded) {
-            // Punch Animation
-            switch (this.#punchAnimState) {
-                case 0:
-                case 2:
-                    frameCoords = { x: 0, y: 0 };
-                    break;
-                case 1:
-                    frameCoords = { x: 0, y: this.#size.h * 2 };
-                    break;
-            }
-        } else if (this.isBlocking && this.isGrounded) {
-            // Block Animation
-            frameCoords = { x: this.#size.w, y: this.#size.h * 2 };
-        } else if (this.#celebrating) {
+        } else if (this.#isCelebrating) {
             // Celebatrion Animation
             frameCoords = { x: this.#size.w * 2, y: this.#size.h * 2 };
+        } else if (this.isCrouching) {
+            // Crouch Animation
+            if (this.isPunching) {
+                // Punch Animation
+                switch (this.#punchAnimState) {
+                    case 0:
+                    case 2:
+                        frameCoords = { x: this.#size.w * 3, y: 0 };
+                        break;
+                    case 1:
+                        frameCoords = { x: this.#size.w * 3, y: this.#size.h };
+                        break;
+                }
+            } else if (this.isKicking) {
+                // Kick Animation
+                switch (this.#kickAnimState) {
+                    case 0:
+                    case 2:
+                        frameCoords = { x: this.#size.w * 3, y: this.#size.h * 3 };
+                        break;
+                    case 1:
+                        frameCoords = { x: this.#size.w * 3, y: this.#size.h * 4 };
+                        break;
+                }
+            } else if (this.isBlocking) {
+                // Block Animation
+                frameCoords = { x: this.#size.w * 3, y: this.#size.h * 2 };
+            } else {
+                frameCoords = { x: this.#size.w * 3, y: 0 };
+            }
         } else if (!this.isGrounded) {
             // Jump Animation
-            if (this.#punchAnimState > 0) {
+            if (this.isPunching) {
                 // Punch Animation
                 switch (this.#punchAnimState) {
                     case 0:
@@ -437,12 +587,48 @@ export class Fighter {
                         frameCoords = { x: this.#size.w, y: this.#size.h * 3 };
                         break;
                 }
+            } else if (this.isKicking) {
+                // Kick Animation
+                switch (this.#kickAnimState) {
+                    case 0:
+                    case 2:
+                        frameCoords = { x: this.#size.w * 2, y: this.#size.h * 5 };
+                        break;
+                    case 1:
+                        frameCoords = { x: this.#size.w * 3, y: this.#size.h * 5 };
+                        break;
+                }
             } else if (this.isBlocking) {
                 // Block Animation
                 frameCoords = { x: this.#size.w * 2, y: this.#size.h * 3 };
             } else {
                 frameCoords = { x: 0, y: this.#size.h * 3 };
             }
+        } else if (this.isPunching) {
+            // Punch Animation
+            switch (this.#punchAnimState) {
+                case 0:
+                case 2:
+                    frameCoords = { x: 0, y: 0 };
+                    break;
+                case 1:
+                    frameCoords = { x: 0, y: this.#size.h * 2 };
+                    break;
+            }
+        } else if (this.isKicking) {
+            // Kick Animation
+            switch (this.#kickAnimState) {
+                case 0:
+                case 2:
+                    frameCoords = { x: 0, y: this.#size.h * 5 };
+                    break;
+                case 1:
+                    frameCoords = { x: this.#size.w, y: this.#size.h * 5 };
+                    break;
+            }
+        } else if (this.isBlocking) {
+            // Block Animation
+            frameCoords = { x: this.#size.w, y: this.#size.h * 2 };
         } else if ((this.#vel.x | 0) != 0) {
             // Walking Animation
             switch (this.#walkingAnimState) {
@@ -491,6 +677,8 @@ export class Fighter {
 
             ctx.drawImage(Fighter.bloodImg, (frameCoords.x | 0), (frameCoords.y | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0), (this.#bloodLoc.x - Fighter.bloodSize.w / 2 | 0), (this.#bloodLoc.y - Fighter.bloodSize.h / 2 | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0));
         }
+
+        if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
     }
 
     DrawUI(ctx) {
@@ -566,7 +754,7 @@ export class Fighter {
     }
 
     Jump() {
-        if (!this.isPunching && !this.isBlocking && this.isGrounded && !this.isStunned) {
+        if (!this.isCrouching && !this.isPunching && !this.isKicking && !this.isBlocking && this.isGrounded && !this.isStunned) {
             this.#vel.y -= this.#jumpForce;
             this.#hasJumped = true;
 
@@ -576,11 +764,29 @@ export class Fighter {
         }
     }
 
+    SetCrouching(isHeld) {
+        if (!isHeld && this.#isCrouching != isHeld) {
+            this.#isCrouching = isHeld;
+            this.#crouchCooldown = Fighter.defaultCrouchCooldown;
+
+            this.Idle();
+
+            this.#engine.PlaySound(7, 0.85 + Math.random() * 0.1, 0.2);
+        } else if (isHeld && !this.isCrouching && !this.isPunching && !this.isKicking && this.isGrounded && this.#crouchCooldown <= 0 && !this.isStunned) {
+            this.#isCrouching = isHeld;
+            this.#vel.x = 0;
+
+            this.Idle();
+
+            this.#engine.PlaySound(7, 0.85 + Math.random() * 0.1, 0.3);
+        }
+    }
+
     Punch() {
-        if (!this.isPunching && !this.isBlocking && this.#punchCooldown <= 0 && !this.isStunned) {
+        if (!this.isPunching && !this.isKicking && !this.isBlocking && this.#punchCooldown <= 0 && !this.isStunned) {
             this.#punchAnimState = 0;
             this.#punchAnimTimer = Fighter.defaultPunchAnimTimer;
-            this.#vel.x += this.moveInput * 60;
+            if (!this.isCrouching) this.#vel.x += this.moveInput * 60;
             this.#punchTimer = 0;
             this.#punchHasHit = false;
             this.#punchCooldown = Fighter.defaultPunchCooldown;
@@ -591,14 +797,30 @@ export class Fighter {
         }
     }
 
+    Kick() {
+        if (!this.isPunching && !this.isKicking && !this.isBlocking && this.#kickCooldown <= 0 && !this.isStunned) {
+            this.#kickAnimState = 0;
+            this.#kickAnimTimer = Fighter.defaultKickAnimTimer;
+            if (!this.isCrouching) this.#vel.x += this.moveInput * 60;
+            this.#kickTimer = 0;
+            this.#kickHasHit = false;
+            this.#kickCooldown = Fighter.defaultKickCooldown;
+
+            this.Idle();
+
+            this.#engine.PlaySound(1 + (Math.random() >= 0.55 ? 1 : 0), 0.9 + Math.random() * 0.2);
+        }
+    }
+
     SetBlocking(isHeld) {
         if (!isHeld && this.#isBlocking != isHeld) {
             this.#isBlocking = isHeld;
+            this.#blockCooldown = Fighter.defaultBlockCooldown;
 
             this.Idle();
 
             this.#engine.PlaySound(7, 0.85 + Math.random() * 0.1, 0.2);
-        } else if (isHeld && !this.isPunching && !this.isBlocking && !this.isStunned) {
+        } else if (isHeld && !this.isPunching && !this.isKicking && !this.isBlocking && this.#blockCooldown <= 0 && !this.isStunned) {
             this.#isBlocking = isHeld;
             this.#vel.x = 0;
 
@@ -609,9 +831,26 @@ export class Fighter {
     }
 
     #UpdateHitboxes() {
-        for (let i = 0; i < this.#hitboxes.length; i++) {
-            const offset = Fighter.hitboxesOffset[i];
-            const hitbox = this.#hitboxes[i];
+        let currentState = "idle";
+        if (this.zeroHealth || this.#isSwept)  currentState = "die";
+        else if (this.isCrouching) {
+            if (this.isPunching && this.#punchAnimState == 1) currentState = "crouch_punch";
+            else if (this.isBlocking) currentState = "crouch_block";
+            else if (this.isKicking) currentState = "crouch_kick";
+            else currentState = "crouch";
+        } else if (!this.isGrounded) {
+            if (this.isPunching && this.#punchAnimState == 1) currentState = "jump_punch";
+            else if (this.isBlocking) currentState = "jump_block";
+            else if (this.isKicking) currentState = "jump_kick";
+            else currentState = "jump";
+        } else if (this.isPunching && this.#punchAnimState == 1) currentState = "punch";
+        else if (this.isKicking) currentState = "kick";
+        else if (this.isBlocking) currentState = "block";
+        const offsets = Fighter.hurtboxOffsets[currentState];
+
+        for (let i = 0; i < this.#hurtboxes.length; i++) {
+            const offset = offsets[i].loc;
+            const hitbox = this.#hurtboxes[i];
 
             let localX = offset.x;
 
@@ -622,13 +861,21 @@ export class Fighter {
 
             hitbox.loc.x = (this.#loc.x + localX) | 0;
             hitbox.loc.y = (this.#loc.y + offset.y) | 0;
+            hitbox.rotation = this.#facingRight ? offsets[i].rot : -offsets[i].rot;
         }
     }
 
-    TakeDamage(hitboxIndex, hitPoint, hitSpeed) {
+    TakeDamage(hitboxIndex, hitPoint, hitSpeed, hitSource) {
         const relativeSpeed = (hitSpeed - this.#vel.x) * (this.#facingRight ? -1 : 1);
         const scaleFactor = Math.max(0.4, Math.min(1.8, 1 + (relativeSpeed / 150)));
-        let damage = Fighter.hitboxesDamage[hitboxIndex] * scaleFactor;
+        let damage = Fighter.hurtboxValues[hitboxIndex].damage * scaleFactor;
+
+        switch (hitSource) {
+            default:
+            case 0: damage *= 1; break;
+            case 1:
+            case 2: damage *= 1.25; break;
+        }
 
         const cubicInterp = (x, p1, p2) => {
             const t = Math.max(0, Math.min(1, (x - p1.x) / (p2.x - p1.x)));
@@ -647,18 +894,22 @@ export class Fighter {
             knockback = cubicInterp(relativeSpeed, { x: 20, y: 255 }, { x: 74, y: 150 })
         }
 
-        this.#ghostTimer = Fighter.defaultGhostTimer;
-
         if (this.isBlocking == 1) {
-            damage *= 0.2;
             knockback *= 0.6;
 
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 1.2 + Math.random() * 0.2, 0.5);
         } else {
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 0.9 + Math.random() * 0.2);
 
-            this.#punchedAnimTimer = Fighter.defaultPunchedAnimTimer;
-            this.#punchedCooldown = Fighter.defaultPunchedCooldown;
+            if (hitSource === 2 && !this.isCrouching) {
+                this.#isSwept = true;
+                this.#dieAnimState = 0;
+                this.#dieAnimTimer = Fighter.defaultDieAnimTimer;
+            } else {
+                this.#hurtAnimTimer = Fighter.defaultHurtAnimTimer;
+                this.#hurtCooldown = Fighter.defaultHurtCooldown;
+            }
+
             this.#bloodAnimTimer = Fighter.defaultBloodAnimTimer;
             this.#bloodAnimState = 0;
             this.#bloodLoc.x = hitPoint.x;
@@ -667,14 +918,14 @@ export class Fighter {
 
         this.#health -= damage;
 
+        this.#ghostTimer = Fighter.defaultGhostTimer;
         this.#punchAnimState = -1;
-
+        this.#kickAnimState = -1;
         this.#vel.x += this.#facingRight ? -knockback : knockback;
-
         this.Idle();
 
         let intensity = 1;
-        if (this.#health <= 0 && !this.#isDead) {
+        if (this.zeroHealth && !this.#isDead) {
             this.#health = 0;
             this.Die();
             this.#isDead = true;
@@ -685,29 +936,35 @@ export class Fighter {
         this.#engine.SlowTime(0, 100);
     }
 
-    QueueDamage(hitboxIndex, hitPoint, hitSpeed) {
-        this.#pendingHit = { hitboxIndex, hitPoint, hitSpeed };
+    QueueDamage(hitboxIndex, hitPoint, hitSpeed, hitSource) {
+        this.#pendingHit = { hitboxIndex, hitPoint, hitSpeed, hitSource };
     }
 
     ResolvePendingDamage() {
         if (this.#pendingHit) {
-            const { hitboxIndex, hitPoint, hitSpeed } = this.#pendingHit;
+            const { hitboxIndex, hitPoint, hitSpeed, hitSource } = this.#pendingHit;
             this.#pendingHit = null;
-            this.TakeDamage(hitboxIndex, hitPoint, hitSpeed);
+            this.TakeDamage(hitboxIndex, hitPoint, hitSpeed, hitSource);
         }
     }
 
     Die() {
+        this.#isCrouching = false;
         this.#punchAnimState = -1;
+        this.#kickAnimState = -1;
         this.#isBlocking = false;
+        this.#isSwept = false;
 
         this.#dieAnimTimer = Fighter.defaultDieAnimTimer;
         this.#dieAnimState = 0;
     }
 
     async Celebrate() {
+        this.#isCrouching = false;
         this.#punchAnimState = -1;
+        this.#kickAnimState = -1;
         this.#isBlocking = false;
+        this.#isSwept = false;
         this.#vel.x = 0;
         this.#vel.y = 0;
 
@@ -716,12 +973,15 @@ export class Fighter {
         this.#vel.y -= this.#jumpForce;
 
         await this.#engine.Wait(50);
-        this.#celebrating = true;
+        this.#isCelebrating = true;
     }
 
     EndState(state) {
+        this.#isCrouching = false;
         this.#punchAnimState = -1;
+        this.#kickAnimState = -1;
         this.#isBlocking = false;
+        this.#isSwept = false;
 
         switch (state) {
             case 0:
@@ -729,7 +989,7 @@ export class Fighter {
                 this.#dieAnimState = 2;
                 break;
             case 1:
-                this.#celebrating = true;
+                this.#isCelebrating = true;
                 break;
         }
     }
@@ -757,11 +1017,15 @@ export class Fighter {
 
         this.moveInput = 0;
         this.#hasJumped = false;
+        this.#isCrouching = false;
         this.#punchAnimState = -1;
         this.#punchCooldown = 0;
+        this.#kickAnimState = -1;
+        this.#kickCooldown = 0;
         this.#isBlocking = false;
-        this.#celebrating = false;
-        this.#punchedCooldown = 0;
+        this.#isCelebrating = false;
+        this.#isSwept = false;
+        this.#hurtCooldown = 0;
         this.#dieAnimState = -1;
         this.#bloodAnimState = -1;
 
@@ -792,17 +1056,25 @@ export class Fighter {
             walkingAnimState: this.#walkingAnimState,
             walkingAnimTimer: this.#walkingAnimTimer,
 
+            isCrouching: this.#isCrouching,
+
             punchAnimState: this.#punchAnimState,
             punchAnimTimer: this.#punchAnimTimer,
             punchHasHit: this.#punchHasHit,
             punchTimer: this.#punchTimer,
             punchCooldown: this.#punchCooldown,
 
-            isBlocking: this.#isBlocking,
-            celebrating: this.#celebrating,
+            kickAnimState: this.#kickAnimState,
+            kickAnimTimer: this.#kickAnimTimer,
+            kickHasHit: this.#kickHasHit,
+            kickTimer: this.#kickTimer,
+            kickCooldown: this.#kickCooldown,
 
-            punchedAnimTimer: this.#punchedAnimTimer,
-            punchedCooldown: this.#punchedCooldown,
+            isBlocking: this.#isBlocking,
+            isCelebrating: this.#isCelebrating,
+
+            hurtAnimTimer: this.#hurtAnimTimer,
+            hurtCooldown: this.#hurtCooldown,
 
             dieAnimState: this.#dieAnimState,
             dieAnimTimer: this.#dieAnimTimer,
@@ -834,17 +1106,25 @@ export class Fighter {
         this.#walkingAnimState = state.walkingAnimState;
         this.#walkingAnimTimer = state.walkingAnimTimer;
 
+        this.#isCrouching = state.isCrouching;
+
         this.#punchAnimState = state.punchAnimState;
         this.#punchAnimTimer = state.punchAnimTimer;
         this.#punchHasHit = state.punchHasHit;
         this.#punchTimer = state.punchTimer;
         this.#punchCooldown = state.punchCooldown;
 
-        this.#isBlocking = state.isBlocking;
-        this.#celebrating = state.celebrating;
+        this.#kickAnimState = state.kickAnimState;
+        this.#kickAnimTimer = state.kickAnimTimer;
+        this.#kickHasHit = state.kickHasHit;
+        this.#kickTimer = state.kickTimer;
+        this.#kickCooldown = state.kickCooldown;
 
-        this.#punchedAnimTimer = state.punchedAnimTimer;
-        this.#punchedCooldown = state.punchedCooldown;
+        this.#isBlocking = state.isBlocking;
+        this.#isCelebrating = state.isCelebrating;
+
+        this.#hurtAnimTimer = state.hurtAnimTimer;
+        this.#hurtCooldown = state.hurtCooldown;
 
         this.#dieAnimState = state.dieAnimState;
         this.#dieAnimTimer = state.dieAnimTimer;
@@ -860,5 +1140,50 @@ export class Fighter {
 
         // Hitboxes are derived from loc/facing, so just rebuild them
         this.#UpdateHitboxes();
+    }
+
+
+    #drawDebugHitboxes(ctx) {
+        ctx.save();
+        ctx.lineWidth = .5;
+
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.7)";
+
+        const rectLimbs = [this.#hurtboxes[1], this.#hurtboxes[2], this.#hurtboxes[3], this.#hurtboxes[4], this.#hurtboxes[5]];
+        for (const rect of rectLimbs) {
+            ctx.save();
+
+            const cx = rect.loc.x + rect.size.w / 2;
+            const cy = rect.loc.y + rect.size.h / 2;
+
+            ctx.translate(cx, cy);
+            ctx.rotate(rect.rotation || 0);
+
+            ctx.beginPath();
+            ctx.rect(-rect.size.w / 2, -rect.size.h / 2, rect.size.w, rect.size.h);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        ctx.beginPath();
+        ctx.arc(this.#hurtboxes[0].loc.x, this.#hurtboxes[0].loc.y, this.#hurtboxes[0].radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
+            ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+            ctx.beginPath();
+            ctx.arc(this.#hitboxes[0].loc.x, this.#hitboxes[0].loc.y, this.#hitboxes[0].radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        if (this.#kickTimer >= this.#startKickTrace && this.#kickTimer <= this.#endKickTrace) {
+            ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+            ctx.beginPath();
+            ctx.rect(this.#hitboxes[1].loc.x, this.#hitboxes[1].loc.y, this.#hitboxes[1].size.w, this.#hitboxes[1].size.h);
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 }

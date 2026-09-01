@@ -118,8 +118,8 @@ To do:
         [x] Rounds
         [x] Shadows under characters
         [x] Gamepad controls (test with 2 controllers or more)
-        [ ] Crouch?
-        [ ] Kick?
+        [x] Crouch
+        [x] Kick
     [x] UI
         [x] Health Bar
         [x] Rounds won count

@@ -11,12 +11,14 @@ export class Controller {
     #gamepadIndex = -1;
 
     #inputs = {
-        "MoveLeft":     { pressed: false, released: true, flag: 1, action: null },
-        "MoveRight":    { pressed: false, released: true, flag: 2, action: null },
-        "Jump":         { pressed: false, released: true, flag: 4, action: () => this.#pawn.Jump() },
-        "Punch":        { pressed: false, released: true, flag: 8, action: () => this.#pawn.Punch() },
-        "Block":        { pressed: false, released: true, flag: 16, action: null },
-        "Pause":        { pressed: false, released: true, flag: -1, action: null }
+        "MoveLeft":  { pressed: false, released: true, flag:  1, action: null },
+        "MoveRight": { pressed: false, released: true, flag:  2, action: null },
+        "Jump":      { pressed: false, released: true, flag:  4, action: () => this.#pawn.Jump() },
+        "Crouch":    { pressed: false, released: true, flag:  8, action: null },
+        "Punch":     { pressed: false, released: true, flag: 16, action: () => this.#pawn.Punch() },
+        "Kick":      { pressed: false, released: true, flag: 32, action: () => this.#pawn.Kick() },
+        "Block":     { pressed: false, released: true, flag: 64, action: null },
+        "Pause":     { pressed: false, released: true, flag: -1, action: null }
     };
 
     static maxInputsSequence = 10;
@@ -70,16 +72,20 @@ export class Controller {
 
         const leftStickX = axes[0];
 
+        // Move: Left/Right on D-Pad/Stick
         this.#inputs.MoveLeft.pressed ||= (leftStickX < -deadzone || buttons[14]?.pressed);
         this.#inputs.MoveRight.pressed ||= (leftStickX > deadzone || buttons[15]?.pressed);
 
-        // Jump: Up on D-Pad/Stick OR the Bottom Button (A/X)
+        // Jump: Up on D-Pad/Stick OR the Bottom Button
         this.#inputs.Jump.pressed ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
+        // Crouch: Down on D-Pad/Stick
+        this.#inputs.Crouch.pressed ||= (buttons[13]?.pressed || leftStickY > deadzone);
 
-        // Punch: West Button (X on Xbox, Square on PS)
+        // Punch: West Button
         this.#inputs.Punch.pressed ||= buttons[2].pressed;
-
-        // Block: Shoulders (L1/R1) or Triggers
+        // Kick: Up Button
+        this.#inputs.Kick.pressed ||= buttons[3].pressed;
+        // Block: Shoulders or Triggers
         this.#inputs.Block.pressed ||= (buttons[4].pressed || buttons[5].pressed || buttons[6].pressed || buttons[7].pressed);
 
         // Pause: Start button
@@ -94,22 +100,28 @@ export class Controller {
                 this.#inputs.MoveLeft.pressed = this.#keys["KeyA"];
                 this.#inputs.MoveRight.pressed = this.#keys["KeyD"];
                 this.#inputs.Jump.pressed = this.#keys["KeyW"];
+                this.#inputs.Crouch.pressed = this.#keys["KeyS"];
                 this.#inputs.Punch.pressed = this.#keys["KeyR"];
-                this.#inputs.Block.pressed = this.#keys["KeyT"];
+                this.#inputs.Kick.pressed = this.#keys["KeyT"];
+                this.#inputs.Block.pressed = this.#keys["KeyY"];
                 break;
             case 1:
                 this.#inputs.MoveLeft.pressed = this.#keys["ArrowLeft"];
                 this.#inputs.MoveRight.pressed = this.#keys["ArrowRight"];
                 this.#inputs.Jump.pressed = this.#keys["ArrowUp"];
+                this.#inputs.Crouch.pressed = this.#keys["ArrowDown"];
                 this.#inputs.Punch.pressed = this.#keys["KeyK"];
-                this.#inputs.Block.pressed = this.#keys["KeyL"];
+                this.#inputs.Kick.pressed = this.#keys["KeyL"];
+                this.#inputs.Block.pressed = this.#keys["Semicolon"];
                 break;
             case 2:
                 this.#inputs.MoveLeft.pressed = this.#keys["KeyA"] || this.#keys["ArrowLeft"];
                 this.#inputs.MoveRight.pressed = this.#keys["KeyD"] || this.#keys["ArrowRight"];
                 this.#inputs.Jump.pressed = this.#keys["KeyW"] || this.#keys["ArrowUp"];
+                this.#inputs.Crouch.pressed = this.#keys["KeyS"] || this.#keys["ArrowDown"];
                 this.#inputs.Punch.pressed = this.#keys["KeyR"] || this.#keys["KeyK"];
-                this.#inputs.Block.pressed = this.#keys["KeyT"] || this.#keys["KeyL"];
+                this.#inputs.Kick.pressed = this.#keys["KeyT"] || this.#keys["KeyL"];
+                this.#inputs.Block.pressed = this.#keys["KeyY"] || this.#keys["Semicolon"];
                 break;
         }
 
@@ -141,8 +153,8 @@ export class Controller {
 
     ApplyMask(mask) {
         let moveDir = 0;
-        if ((mask & 1) !== 0) moveDir -= 1;
-        if ((mask & 2) !== 0) moveDir += 1;
+        if ((mask & this.#inputs.MoveLeft.flag) !== 0) moveDir -= 1;
+        if ((mask & this.#inputs.MoveRight.flag) !== 0) moveDir += 1;
         this.#pawn.moveInput = moveDir;
 
         let sequenceUpdated = false;
@@ -163,7 +175,8 @@ export class Controller {
             }
         }
 
-        this.#pawn.SetBlocking((mask & 16) !== 0);
+        this.#pawn.SetCrouching((mask & this.#inputs.Crouch.flag) !== 0);
+        this.#pawn.SetBlocking((mask & this.#inputs.Block.flag) !== 0);
 
         if (sequenceUpdated) {
             for (const combo of this.#sequenceCombos) {
