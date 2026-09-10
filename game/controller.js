@@ -110,18 +110,18 @@ export class Controller {
                 this.#inputs.MoveRight.pressed = this.#keys["ArrowRight"];
                 this.#inputs.Jump.pressed = this.#keys["ArrowUp"];
                 this.#inputs.Crouch.pressed = this.#keys["ArrowDown"];
-                this.#inputs.Punch.pressed = this.#keys["KeyK"];
-                this.#inputs.Kick.pressed = this.#keys["KeyL"];
-                this.#inputs.Block.pressed = this.#keys["Semicolon"];
+                this.#inputs.Punch.pressed = this.#keys["KeyJ"];
+                this.#inputs.Kick.pressed = this.#keys["KeyK"];
+                this.#inputs.Block.pressed = this.#keys["KeyL"];
                 break;
             case 2:
                 this.#inputs.MoveLeft.pressed = this.#keys["KeyA"] || this.#keys["ArrowLeft"];
                 this.#inputs.MoveRight.pressed = this.#keys["KeyD"] || this.#keys["ArrowRight"];
                 this.#inputs.Jump.pressed = this.#keys["KeyW"] || this.#keys["ArrowUp"];
                 this.#inputs.Crouch.pressed = this.#keys["KeyS"] || this.#keys["ArrowDown"];
-                this.#inputs.Punch.pressed = this.#keys["KeyR"] || this.#keys["KeyK"];
-                this.#inputs.Kick.pressed = this.#keys["KeyT"] || this.#keys["KeyL"];
-                this.#inputs.Block.pressed = this.#keys["KeyY"] || this.#keys["Semicolon"];
+                this.#inputs.Punch.pressed = this.#keys["KeyR"] || this.#keys["KeyJ"];
+                this.#inputs.Kick.pressed = this.#keys["KeyT"] || this.#keys["KeyK"];
+                this.#inputs.Block.pressed = this.#keys["KeyY"] || this.#keys["KeyL"];
                 break;
         }
 

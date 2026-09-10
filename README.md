@@ -4,7 +4,7 @@
   <h2 align="center">Bar Brawl</h2>
 
   <p align="center">
-    A simple browser, fighting game where you punch, block and knock the other guy out. There's not really much to it.
+    Bar Brawl is a browser fighting game where you punch, kick, and sweep your friends in quick online or local matches.
   </p>
 
   <h4>You can give it a try <a href="https://digow.itch.io/bar-brawl">right here</a>.</h4>
@@ -25,9 +25,9 @@
 <!-- ABOUT -->
 ## About The Project
 
-This project started as an experiment with peer-to-peer connections on browsers. I've always been intrigued by online games, and if I can do it without spending a cent, well that's even better.
+This project started as an experiment with peer-to-peer connections on browsers. I've always been intrigued by online games, and if I can do it without spending a dime, well that's even better.
 
-The game has a weird/silly story that I wrote during a university lecture. It also, has this pixel-art style, because I have no idea how to do art. The audio is pure silence, I tried making my own sounds, but your ears are better off without them. Though, I would like to add sound effects, to get the full experience.
+The game has a weird/silly story that I wrote during a lecture. It also, has a pixel-art style, because I have no idea how to do art. The audio was mostly made with my mouth, I think it ended up pretty good. The only thing missing is music, which I have no idea how to do.
 
 <p align="right">(<a href="#Bar-Brawl">back to top</a>)</p>
 
