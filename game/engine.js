@@ -144,9 +144,9 @@ export class FighterEngine {
         /* 24 */ { name: "dialogue3", bus: 0 },
         /* 25 */ { name: "zoomout", bus: 0 },
         /* 26 */ { name: "bottle_breaking", bus: 0 },
-        /* 27 */ { name: "music_menu", bus: 2 },
-        /* 28 */ { name: "music_round", bus: 2 },
-        /* 29 */ { name: "music_intro", bus: 2 },
+        /* 27 */ { name: "intro_bg", bus: 0 },
+        /* 28 */ { name: "music_menu", bus: 2 },
+        /* 29 */ { name: "music_round", bus: 2 },
     ]
     #soundBuffers = [];
     #volume = .5;
@@ -234,7 +234,7 @@ export class FighterEngine {
 
         await this.#preloadSounds();
 
-        this.#musicSfx = this.PlaySound(27, 1, 0.4, true, 1000);
+        // this.#musicSfx = this.PlaySound(28, 1, 0.4, true, 1000);
     }
 
     Tick(deltaTime) {
@@ -586,8 +586,14 @@ export class FighterEngine {
             this.DrawPixelText(this.#ctx, "Logo by", (this.#uiRoundLoc.x | 0), (Y + 75 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
             this.DrawPixelText(this.#ctx, "Rift", (this.#uiRoundLoc.x | 0), (Y + 90 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
 
-            this.DrawPixelText(this.#ctx, "Special Thanks to", (this.#uiRoundLoc.x | 0), (Y + 150 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
-            this.DrawPixelText(this.#ctx, "Dogo, Mewy", (this.#uiRoundLoc.x | 0), (Y + 165 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, "Sound Effects", (this.#uiRoundLoc.x | 0), (Y + 150 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, '"Bottles Breaking.wav" by', (this.#uiRoundLoc.x | 0), (Y + 165 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, 'Tim_Verberne', (this.#uiRoundLoc.x | 0), (Y + 180 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, '"Sound of an Irish Pub" by', (this.#uiRoundLoc.x | 0), (Y + 210 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, 'jonnymccullagh', (this.#uiRoundLoc.x | 0), (Y + 225 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+
+            this.DrawPixelText(this.#ctx, "Special Thanks to", (this.#uiRoundLoc.x | 0), (Y + 285 | 0), (fontSize2 | 0), FighterEngine.uiRoundFillColor, "#00000000");
+            this.DrawPixelText(this.#ctx, "Dogo, Mewy", (this.#uiRoundLoc.x | 0), (Y + 300 | 0), (fontSize1 | 0), FighterEngine.uiRoundFillColor, "#00000000");
         } else if (this.#gameState === "GAME_OVER") {
             let fontSize = FighterEngine.uiRoundSize;
             if (this.#uiGameOverTimer > 0) {
@@ -710,7 +716,7 @@ export class FighterEngine {
 
                 this.#uiRoundText = "";
 
-                this.#musicSfx = this.PlaySound(27, 1, 0.4, true, 1000);
+                // this.#musicSfx = this.PlaySound(28, 1, 0.4, true, 1000);
 
                 if (!this.isOnline) this.#audioBuses[0]?.gain.setValueAtTime(1, this.#audioCtx.currentTime);
                 break;
@@ -723,7 +729,7 @@ export class FighterEngine {
                 this.#introTimer = 0;
                 this.#introState = 0;
 
-                this.#musicSfx = this.PlaySound(29, 1, 0.25, true, 500);
+                this.#musicSfx = this.PlaySound(27, 1, 0.25, true, 500);
                 break;
             case 2:
             case "PRE_ROUND":
@@ -829,7 +835,7 @@ export class FighterEngine {
         this.#rounds++;
         this.#roundTime = FighterEngine.maxRoundTime;
 
-        this.#musicSfx = this.PlaySound(28, 1, 0.4, true, 1000);
+        // this.#musicSfx = this.PlaySound(29, 1, 0.4, true, 1000);
         await this.Wait(50);
         this.PlaySound(11 + this.#rounds);
         await this.Wait(950);
@@ -1114,7 +1120,7 @@ export class FighterEngine {
         const spacing = 0;
         const spaceWidth = (outSize.w / 3) | 0;
 
-        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789.!?_,-"]
+        const rows = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", '0123456789.!?_,-"']
 
         let totalWidth = 0;
         for (let i = 0; i < text.length; i++) {

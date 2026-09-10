@@ -85,9 +85,9 @@ To do:
         [x] Dialogue
         [x] Zoom out
         [x] Bottle breaking (Bottles Breaking.wav by Tim_Verberne)
+        [x] Intro back noise (Sound of an Irish Pub by jonnymccullagh)
         [ ] Round music
         [ ] Menu music
-        [x] Intro back noise (Sound of an Irish Pub by jonnymccullagh)
     [x] Bald Character
         [x] Idling
         [x] Walking
