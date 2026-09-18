@@ -8,12 +8,15 @@ export class AIController {
 
     static attackRange = 20;
     static wallMargin = 15;
+    static jumpInRange = 60;
 
     #lastDistance;
 
     #opponentWasAttacking = false;
     #reactionTimer = 0;
     #blockDuration = 0;
+
+    #sweepQueued = false;
 
     #difficulty = 1; // 0 = easiest, 1 = hardest
 
@@ -28,10 +31,13 @@ export class AIController {
         this.#difficulty = Math.max(0, Math.min(1, difficulty));
     }
 
-    get #reactionDelay() { return 0.4 - this.#difficulty * 0.4; } // 0.4s -   0s
-    get #blockChance() { return 0.2 + this.#difficulty * 0.8; }   //  20% - 100%
-    get #baitChance() { return 0.1 + this.#difficulty * 0.6; }    //  10% -  70%
-    get #missChance() { return 0.5 - this.#difficulty * 0.5; }    //  50% -   0%
+    get #reactionDelay() { return 0.4 - this.#difficulty * 0.4; }    // 0.4s -   0s
+    get #blockChance() { return 0.2 + this.#difficulty * 0.8; }      //  20% - 100%
+    get #baitChance() { return 0.1 + this.#difficulty * 0.6; }       //  10% -  70%
+    get #missChance() { return 0.5 - this.#difficulty * 0.5; }       //  50% -   0%
+    get #sweepJumpChance() { return 0.1 + this.#difficulty * 0.5; }  //  10% -  60%
+    get #jumpInChance() { return 0.005 + this.#difficulty * 0.02; }  // 0.5% - 2.5%
+    get #cornerJumpChance() { return 0.01 + this.#difficulty * 0.09; } // 1% -  10%
 
     Begin() {
         this.#opponent = this.#engine.getOpponent(this.#pawn);
@@ -51,6 +57,20 @@ export class AIController {
         const distance = Math.abs(oppX - myX);
         const distanceDiff = distance - this.#lastDistance;
 
+        if (this.#sweepQueued) {
+            this.#pawn.SetCrouching(true);
+            this.#pawn.SetBlocking(false);
+            this.#pawn.moveInput = 0;
+            this.#pawn.Kick();
+
+            if (!this.#pawn.isKicking) {
+                this.#sweepQueued = false;
+            }
+
+            this.#lastDistance = distance;
+            return;
+        }
+
         const worldWidth = this.#engine.worldWidth;
         const nearLeftWall = myX < AIController.wallMargin;
         const nearRightWall = myRight > worldWidth - AIController.wallMargin;
@@ -60,6 +80,7 @@ export class AIController {
         const isInAttackRange = distance < AIController.attackRange;
 
         const isOpponentAttacking = this.#opponent.isPunching || this.#opponent.isKicking;
+        const isOpponentSweeping = this.#opponent.isKicking && this.#opponent.isCrouching;
 
         if (isOpponentAttacking && !this.#opponentWasAttacking) {
             this.#reactionTimer = this.#reactionDelay;
@@ -74,11 +95,21 @@ export class AIController {
 
         if (wallEscapeDir !== 0) {
             // Cornered
+            if (isInAttackRange && (this.#difficulty === 1 || Math.random() < this.#cornerJumpChance)) {
+                this.#pawn.Jump();
+            }
             move = wallEscapeDir;
         } else if (this.#blockDuration > 0 && this.#reactionTimer <= 0) {
             // Defending
-            blocking = isInAttackRange && (this.#difficulty === 1 || Math.random() < this.#blockChance);
-            if (blocking && this.#opponent.isCrouching) crouching = true; // Crouch block to defend sweeps
+            if (isOpponentSweeping && isInAttackRange && (this.#difficulty === 1 || Math.random() < this.#sweepJumpChance)) {
+                // Jump over a sweep
+                this.#pawn.Jump();
+            } else {
+                blocking = isInAttackRange && (this.#difficulty === 1 || Math.random() < this.#blockChance);
+                if (blocking && this.#opponent.isCrouching) {
+                    crouching = true; // Crouch block to defend sweeps
+                }
+            }
         } else if (shouldBait) {
             // Baiting
             move = (oppX < myX) ? 1 : -1;
@@ -92,17 +123,20 @@ export class AIController {
 
                 if (doSweep) {
                     crouching = true;
-                    this.#pawn.Kick();
+                    this.#sweepQueued = true;
                 } else if (isInAttackRange && Math.random() > 0.5) {
                     this.#pawn.Punch();
                 } else {
                     this.#pawn.Kick();
                 }
+            } else if (distance < AIController.attackRange + AIController.jumpInRange && (this.#difficulty === 1 || Math.random() < this.#jumpInChance)) {
+                // Close the gap with a jumping approach
+                this.#pawn.Jump();
             }
         }
 
         const heightDiff = (this.#opponent.loc.y + this.#opponent.size.h * 0.2) - (this.#pawn.loc.y);
-        if (isInAttackRange && heightDiff < -10 && this.#pawn.isGrounded) this.#pawn.Jump();
+        if (isInAttackRange && heightDiff < -10) this.#pawn.Jump();
 
         this.#pawn.moveInput = move;
         this.#pawn.SetCrouching(crouching);
@@ -112,5 +146,6 @@ export class AIController {
 
     Reset() {
         this.#pawn.moveInput = 0;
+        this.#sweepQueued = false;
     }
 }

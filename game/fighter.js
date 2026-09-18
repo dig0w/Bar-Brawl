@@ -168,7 +168,7 @@ export class Fighter {
     static crouchHitboxOffset = { x: 0, y: 5 };
     #hitboxes = [];
     #pendingHit = null;
-    static showHitboxes = false;
+    // static showHitboxes = false;
 
     static maxHealth = 100;
     #health = Fighter.maxHealth;
@@ -678,7 +678,7 @@ export class Fighter {
             ctx.drawImage(Fighter.bloodImg, (frameCoords.x | 0), (frameCoords.y | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0), (this.#bloodLoc.x - Fighter.bloodSize.w / 2 | 0), (this.#bloodLoc.y - Fighter.bloodSize.h / 2 | 0), (Fighter.bloodSize.w | 0), (Fighter.bloodSize.h | 0));
         }
 
-        if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
+        // if (Fighter.showHitboxes) this.#drawDebugHitboxes(ctx);
     }
 
     DrawUI(ctx) {
@@ -894,21 +894,19 @@ export class Fighter {
             knockback = cubicInterp(relativeSpeed, { x: 20, y: 255 }, { x: 74, y: 150 })
         }
 
-        if (this.isBlocking == 1) {
+        if (hitSource === 2 && !this.isCrouching) {
+            this.#isSwept = true;
+            this.#dieAnimState = 0;
+            this.#dieAnimTimer = Fighter.defaultDieAnimTimer;
+        } else if (this.isBlocking == 1) {
             knockback *= 0.6;
 
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 1.2 + Math.random() * 0.2, 0.5);
         } else {
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 0.9 + Math.random() * 0.2);
 
-            if (hitSource === 2 && !this.isCrouching) {
-                this.#isSwept = true;
-                this.#dieAnimState = 0;
-                this.#dieAnimTimer = Fighter.defaultDieAnimTimer;
-            } else {
-                this.#hurtAnimTimer = Fighter.defaultHurtAnimTimer;
-                this.#hurtCooldown = Fighter.defaultHurtCooldown;
-            }
+            this.#hurtAnimTimer = Fighter.defaultHurtAnimTimer;
+            this.#hurtCooldown = Fighter.defaultHurtCooldown;
 
             this.#bloodAnimTimer = Fighter.defaultBloodAnimTimer;
             this.#bloodAnimState = 0;
@@ -1143,47 +1141,47 @@ export class Fighter {
     }
 
 
-    #drawDebugHitboxes(ctx) {
-        ctx.save();
-        ctx.lineWidth = .5;
+    // #drawDebugHitboxes(ctx) {
+    //     ctx.save();
+    //     ctx.lineWidth = .5;
 
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.7)";
+    //     ctx.strokeStyle = "rgba(0, 255, 0, 0.7)";
 
-        const rectLimbs = [this.#hurtboxes[1], this.#hurtboxes[2], this.#hurtboxes[3], this.#hurtboxes[4], this.#hurtboxes[5]];
-        for (const rect of rectLimbs) {
-            ctx.save();
+    //     const rectLimbs = [this.#hurtboxes[1], this.#hurtboxes[2], this.#hurtboxes[3], this.#hurtboxes[4], this.#hurtboxes[5]];
+    //     for (const rect of rectLimbs) {
+    //         ctx.save();
 
-            const cx = rect.loc.x + rect.size.w / 2;
-            const cy = rect.loc.y + rect.size.h / 2;
+    //         const cx = rect.loc.x + rect.size.w / 2;
+    //         const cy = rect.loc.y + rect.size.h / 2;
 
-            ctx.translate(cx, cy);
-            ctx.rotate(rect.rotation || 0);
+    //         ctx.translate(cx, cy);
+    //         ctx.rotate(rect.rotation || 0);
 
-            ctx.beginPath();
-            ctx.rect(-rect.size.w / 2, -rect.size.h / 2, rect.size.w, rect.size.h);
-            ctx.stroke();
+    //         ctx.beginPath();
+    //         ctx.rect(-rect.size.w / 2, -rect.size.h / 2, rect.size.w, rect.size.h);
+    //         ctx.stroke();
 
-            ctx.restore();
-        }
+    //         ctx.restore();
+    //     }
 
-        ctx.beginPath();
-        ctx.arc(this.#hurtboxes[0].loc.x, this.#hurtboxes[0].loc.y, this.#hurtboxes[0].radius, 0, Math.PI * 2);
-        ctx.stroke();
+    //     ctx.beginPath();
+    //     ctx.arc(this.#hurtboxes[0].loc.x, this.#hurtboxes[0].loc.y, this.#hurtboxes[0].radius, 0, Math.PI * 2);
+    //     ctx.stroke();
 
-        if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
-            ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
-            ctx.beginPath();
-            ctx.arc(this.#hitboxes[0].loc.x, this.#hitboxes[0].loc.y, this.#hitboxes[0].radius, 0, Math.PI * 2);
-            ctx.stroke();
-        }
+    //     if (this.#punchTimer >= this.#startPunchTrace && this.#punchTimer <= this.#endPunchTrace) {
+    //         ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+    //         ctx.beginPath();
+    //         ctx.arc(this.#hitboxes[0].loc.x, this.#hitboxes[0].loc.y, this.#hitboxes[0].radius, 0, Math.PI * 2);
+    //         ctx.stroke();
+    //     }
 
-        if (this.#kickTimer >= this.#startKickTrace && this.#kickTimer <= this.#endKickTrace) {
-            ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
-            ctx.beginPath();
-            ctx.rect(this.#hitboxes[1].loc.x, this.#hitboxes[1].loc.y, this.#hitboxes[1].size.w, this.#hitboxes[1].size.h);
-            ctx.stroke();
-        }
+    //     if (this.#kickTimer >= this.#startKickTrace && this.#kickTimer <= this.#endKickTrace) {
+    //         ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+    //         ctx.beginPath();
+    //         ctx.rect(this.#hitboxes[1].loc.x, this.#hitboxes[1].loc.y, this.#hitboxes[1].size.w, this.#hitboxes[1].size.h);
+    //         ctx.stroke();
+    //     }
 
-        ctx.restore();
-    }
+    //     ctx.restore();
+    // }
 }

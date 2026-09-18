@@ -6,7 +6,7 @@ import { NetworkManager } from "./network.js";
 
 export class FighterEngine {
     static gravity = 980;
-    static friction = .98;
+    static friction = 0.98;
     #groundY = 2;
     #worldWidth = 0;
     #timeScale = 1;
@@ -67,7 +67,7 @@ export class FighterEngine {
     static tCanvas = document.createElement("canvas");
     static tCtx = FighterEngine.tCanvas.getContext("2d");
 
-    static defaultUiGameOverTimer = .25;
+    static defaultUiGameOverTimer = 0.25;
     #uiGameOverTimer = 0;
     #uiGameOverText = "";
 
@@ -77,18 +77,18 @@ export class FighterEngine {
     #uiCreditsLocY = 0;
 
     #uiRoundText = "";
-    static defaultUiRoundTimer = .75;
+    static defaultUiRoundTimer = 0.75;
     #uiRoundTimer = 0;
-    #uiRoundLoc = { x: .5, y: .4 };
+    #uiRoundLoc = { x: 0.5, y: 0.4 };
     static uiRoundSize = 16;
-    static defaultUiRoundAfterTimer = .25;
+    static defaultUiRoundAfterTimer = 0.25;
     #uiRoundAfterTimer = 0;
-    #uiRoundAfterLoc = { x: .5, y: 11 };
+    #uiRoundAfterLoc = { x: 0.5, y: 11 };
     static uiRoundAfterSize = 8;
     static uiRoundFillColor = "#feffff";
     static uiRoundOutlineColor = "#545454";
 
-    static defaultUiFightTimer = .75;
+    static defaultUiFightTimer = 0.75;
     #uiFightTimer = 0;
     #uiFightDone = false;
     static uiFightFillColor = "#e66257";
@@ -145,11 +145,11 @@ export class FighterEngine {
         /* 25 */ { name: "zoomout", bus: 0 },
         /* 26 */ { name: "bottle_breaking", bus: 0 },
         /* 27 */ { name: "intro_bg", bus: 0 },
-        /* 28 */ { name: "music_menu", bus: 2 },
-        /* 29 */ { name: "music_round", bus: 2 },
+        // /* 28 */ { name: "music_menu", bus: 2 },
+        // /* 29 */ { name: "music_round", bus: 2 },
     ]
     #soundBuffers = [];
-    #volume = .5;
+    #volume = 0.5;
     #musicSfx = null;
 
     constructor() { }
