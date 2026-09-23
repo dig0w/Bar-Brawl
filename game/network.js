@@ -2,8 +2,16 @@ import { FighterEngine } from "./engine.js";
 import { Controller } from "./controller.js";
 
 export class NetworkManager {
+    // Supabase Creds
     static signalingURL = "https://cqawfcgolofiaudqacrg.supabase.co";
     static signalingKey = "sb_publishable_frZwSlAoGpeiFaZAxODyVw_kTyvDhZU";
+
+    // Metered Creds
+    static turnURL = "turn:global.relay.metered.ca:443";
+    static turnUsername = "f575170b5a83bad9d5a47a73";
+    static turnPass = "sqDHTJTNcgqtXI2E";
+
+    #libsPromise = null;
 
     #engine;
     #sessionCode;
@@ -113,7 +121,20 @@ export class NetworkManager {
     }
 
     #initPeer(initiator, targetId, gameStateMode) {
-        const p = new SimplePeer({ initiator, trickle: false });
+        const p = new SimplePeer({
+            initiator,
+            trickle: false,
+            config: {
+                iceServers: [
+                    { urls: "stun:stun.l.google.com:19302" },
+                    { 
+                        urls: NetworkManager.turnURL,
+                        username: NetworkManager.turnUsername,
+                        credential: NetworkManager.turnPass
+                    }
+                ]
+            }
+        });
 
         p.on("signal", signal => {
             if (this.#channel) {
@@ -194,7 +215,8 @@ export class NetworkManager {
             if (this.#engine.gameState !== "MENU") this.#engine.mainMenu.StartGame(-1, 0);
         });
 
-        p.on("error", (a) => {
+        p.on("error", (e) => {
+            console.error(e);
             this.Disconnect();
             if (this.#engine.gameState !== "MENU") this.#engine.mainMenu.StartGame(-1, 0);
         });
@@ -204,6 +226,8 @@ export class NetworkManager {
     }
 
     async Host() {
+        await this.loadLibs();
+
         const code = Math.random().toString(36).substring(2, 7).toUpperCase();
         this.#sessionCode = code;
         this.#status = "HOSTING";
@@ -220,6 +244,9 @@ export class NetworkManager {
 
     async Join(code) {
         if (!code) return;
+
+        await this.loadLibs();
+
         this.#status = "JOINING";
 
         this.#connectSignaling(code, () => {
@@ -305,9 +332,11 @@ export class NetworkManager {
 
 
     loadLibs() {
-        return new Promise((resolve, reject) => {
-            if (window.SimplePeer && window.supabase) return resolve();
+        if (window.SimplePeer && window.supabase) return Promise.resolve();
 
+        if (this.#libsPromise) return this.#libsPromise;
+
+        this.#libsPromise = new Promise((resolve, reject) => {
             const signalingScript = document.createElement("script");
             signalingScript.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
@@ -322,13 +351,21 @@ export class NetworkManager {
                 }
             };
 
+            const onScriptError = (err) => {
+                this.#libsPromise = null; // Clear so it can retry in failure
+                console.error(err);
+                reject(err);
+            }
+
             signalingScript.onload = onScriptLoad;
             peerScript.onload = onScriptLoad;
-            signalingScript.onerror = reject;
-            peerScript.onerror = reject;
+            signalingScript.onerror = onScriptError;
+            peerScript.onerror = onScriptError;
 
             document.head.appendChild(signalingScript);
             document.head.appendChild(peerScript);
         });
+
+        return this.#libsPromise;
     }
 }

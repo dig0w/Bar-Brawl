@@ -159,7 +159,7 @@ export class Fighter {
     #hurtboxes = [];
     static hitboxValues = [
         { w: 4, h: 4 }, // Punch
-        { w: 4, h: 4 }  // Kick
+        { w: 6, h: 6 }  // Kick
     ];
     static hitboxOffsets = [
         { start: { x: 21, y: 22 }, end: { x: 29, y: 19 } }, // Punch
@@ -391,12 +391,12 @@ export class Fighter {
                 if (this.#kickTimer >= this.#startKickTrace && this.#kickTimer <= this.#endKickTrace) {
                     const percent = (this.#kickTimer - this.#startKickTrace) / (this.#endKickTrace - this.#startKickTrace);
 
-                    const dx = Fighter.hitboxOffsets[1].end.x - Fighter.hitboxOffsets[1].start.x + (this.isCrouching ? Fighter.crouchHitboxOffset.x : 0);
-                    const dy = Fighter.hitboxOffsets[1].end.y - Fighter.hitboxOffsets[1].start.y + (this.isCrouching ? Fighter.crouchHitboxOffset.y : 0);
-                    let localX = Fighter.hitboxOffsets[1].start.x + (dx * percent);
-                    let localY = Fighter.hitboxOffsets[1].start.y + (dy * percent);
+                    const dx = Fighter.hitboxOffsets[1].end.x - Fighter.hitboxOffsets[1].start.x;
+                    const dy = Fighter.hitboxOffsets[1].end.y - Fighter.hitboxOffsets[1].start.y;
+                    let localX = Fighter.hitboxOffsets[1].start.x + (dx * percent) + (this.isCrouching ? Fighter.crouchHitboxOffset.x : 0);
+                    let localY = Fighter.hitboxOffsets[1].start.y + (dy * percent) + (this.isCrouching ? Fighter.crouchHitboxOffset.y : 0);
 
-                    if (!this.#facingRight) localX = this.#size.w - localX;
+                    if (!this.#facingRight) localX = this.#size.w - localX - Fighter.hitboxValues[1].w;
 
                     this.#hitboxes[1].loc.x = (this.#loc.x + localX) | 0;
                     this.#hitboxes[1].loc.y = (this.#loc.y + localY) | 0;
@@ -898,7 +898,7 @@ export class Fighter {
             this.#isSwept = true;
             this.#dieAnimState = 0;
             this.#dieAnimTimer = Fighter.defaultDieAnimTimer;
-        } else if (this.isBlocking == 1) {
+        } else if (this.isBlocking) {
             knockback *= 0.6;
 
             this.#engine.PlaySound(5 + (Math.random() >= 0.5 ? 1 : 0), 1.2 + Math.random() * 0.2, 0.5);

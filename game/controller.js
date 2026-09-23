@@ -71,13 +71,14 @@ export class Controller {
         const deadzone = 0.5;
 
         const leftStickX = axes[0];
+        const leftStickY = axes[1];
 
         // Move: Left/Right on D-Pad/Stick
         this.#inputs.MoveLeft.pressed ||= (leftStickX < -deadzone || buttons[14]?.pressed);
         this.#inputs.MoveRight.pressed ||= (leftStickX > deadzone || buttons[15]?.pressed);
 
         // Jump: Up on D-Pad/Stick OR the Bottom Button
-        this.#inputs.Jump.pressed ||= (buttons[0].pressed || buttons[12]?.pressed || axes[1] < -deadzone);
+        this.#inputs.Jump.pressed ||= (buttons[0].pressed || buttons[12]?.pressed || leftStickY < -deadzone);
         // Crouch: Down on D-Pad/Stick
         this.#inputs.Crouch.pressed ||= (buttons[13]?.pressed || leftStickY > deadzone);
 

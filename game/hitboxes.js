@@ -55,10 +55,17 @@ function IntersectsCircleCircle(c1, c2) {
     let hitPoint = null;
     if (intersected) {
         const distance = Math.sqrt(distanceSquared);
-        hitPoint = {
-            x: c1.loc.x + (dx / distance) * c1.radius,
-            y: c1.loc.y + (dy / distance) * c1.radius
-        };
+        if (distance < 0.0001) {
+            hitPoint = {
+                x: c1.loc.x,
+                y: c1.loc.y
+            };
+        } else {
+            hitPoint = {
+                x: c1.loc.x + (dx / distance) * c1.radius,
+                y: c1.loc.y + (dy / distance) * c1.radius
+            };
+        }
     }
 
     return { intersected, hitPoint };

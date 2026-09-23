@@ -59,21 +59,9 @@ export class Menu {
     }
 
     Begin() {
-        window.addEventListener("keydown", (e) => this.#keys[e.code] = true);
-        window.addEventListener("keyup", (e) => this.#keys[e.code] = false);
-
-        this.#engine.canvas.addEventListener("mousemove", (e) => {
-            const rect = this.#engine.canvas.getBoundingClientRect();
-
-            this.#mouse.x = (e.clientX - rect.left) / (rect.width / this.#engine.canvas.width);
-            this.#mouse.y = (e.clientY - rect.top) / (rect.height / this.#engine.canvas.height);
-        });
-
-        this.#engine.canvas.addEventListener("mousedown", () => {
-            if (this.#mouseHovering) this.#handleSelection();
-        });
-
         window.addEventListener("keydown", (e) => {
+            this.#keys[e.code] = true;
+
             if (!this.#isInputActive) return;
 
             if (e.key === "Enter") {
@@ -87,6 +75,18 @@ export class Menu {
                     this.#inputString += e.key.toUpperCase();
                 }
             }
+        });
+        window.addEventListener("keyup", (e) => this.#keys[e.code] = false);
+
+        this.#engine.canvas.addEventListener("mousemove", (e) => {
+            const rect = this.#engine.canvas.getBoundingClientRect();
+
+            this.#mouse.x = (e.clientX - rect.left) / (rect.width / this.#engine.canvas.width);
+            this.#mouse.y = (e.clientY - rect.top) / (rect.height / this.#engine.canvas.height);
+        });
+
+        this.#engine.canvas.addEventListener("mousedown", () => {
+            if (this.#mouseHovering) this.#handleSelection();
         });
 
         window.addEventListener("paste", (e) => {
@@ -333,6 +333,7 @@ export class Menu {
         this.#menuIndex = i;
         this.#selectedIndex = 0;
         this.#options = Menu.menusOptions[this.#menuIndex];
+        this.#copyTimer = 0;
 
         if (this.#menuIndex === 4) {
             this.#isInputActive = true;
@@ -357,7 +358,6 @@ export class Menu {
                 this.#canSelect = false;
                 this.#engine.Resume();
                 return;
-                break;
             default:
                 if (this.#engine.gamePaused) i = 6;
                 else i = 0;

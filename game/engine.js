@@ -262,15 +262,16 @@ export class FighterEngine {
         let isSimulationLocked = false;
 
         if (this.isOnline) {
-            // Read inputs & send to the future!
-            this.#ctrl0.ReadInputs();
-            let localMask = this.#ctrl0.GetInputMask();
-            if (this.#gameState !== "FIGHTING" || this.#gamePaused) localMask = 0;
-            const targetFrame = (this.#currentFrame + Controller.delayFrames) >>> 0;
+            if (!this.#isSimulationLocked) {
+                // Read inputs & send to the future!
+                this.#ctrl0.ReadInputs();
+                let localMask = this.#ctrl0.GetInputMask();
+                if (this.#gameState !== "FIGHTING" || this.#gamePaused) localMask = 0;
+                const targetFrame = (this.#currentFrame + Controller.delayFrames) >>> 0;
 
-            this.#ctrl0.QueueInput(targetFrame, localMask);
-            // also send the a zero out mask to the other client when paused
-            this.#network.SendInput(targetFrame, localMask);
+                this.#ctrl0.QueueInput(targetFrame, localMask);
+                this.#network.SendInput(targetFrame, localMask);
+            }
 
             // Fetch both inputs for the current frame
             const p1Input = this.#ctrl0.GetInputForFrame(this.#currentFrame);
@@ -343,12 +344,8 @@ export class FighterEngine {
                 } else if (this.#fighter1.zeroHealth) {
                     this.RoundOver(this.#fighter1);
                 }
-            }
 
-            if (this.isOnline || (this.#gameState === "FIGHTING" && !this.#gamePaused)) {
-                this.#currentFrame = (this.#currentFrame + 1) >>> 0;
-
-                if (this.#roundTime > 0) {
+                if (this.#roundTime > 0 && (!this.#gamePaused || this.isOnline)) {
                     this.#roundTime -= deltaTime;
 
                     if (this.#roundTime <= 0) {
@@ -360,6 +357,10 @@ export class FighterEngine {
                         }
                     }
                 }
+            }
+
+            if (this.isOnline || (this.#gameState === "FIGHTING" && !this.#gamePaused)) {
+                this.#currentFrame = (this.#currentFrame + 1) >>> 0;
             }
         }
 
